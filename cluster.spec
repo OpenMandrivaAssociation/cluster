@@ -48,7 +48,7 @@ This package contains header files and static libraries.
 
 %package -n %{module_name}
 Summary:	Redhat's cluster suite kernel modules
-Group:          System/Kernel and Hardware
+Group:          System/Kernel and hardware
 Requires(pre):  dkms
 Requires(post): dkms
 
