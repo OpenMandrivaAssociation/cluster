@@ -19,7 +19,6 @@ Patch2: cluster-1.03.00-lccs.patch
 Patch3: dkms-cluster-1.03.00-dkms.patch
 Url:		ftp://sources.redhat.com/pub/cluster/releases/
 Group:		System/Kernel and hardware
-Buildroot:	%{_tmppath}/%{name}-%{version}-root
 Buildrequires:	libxml2-devel, kernel-source
 Requires:	%{libname}
 Conflicts:	gfs, gfs-kernel,ccs,cman,cman-kernel,dlm,dlm-kernel,fence,gulm,magma,magma-plugins,rgmanager
