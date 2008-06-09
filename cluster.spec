@@ -195,11 +195,9 @@ dkms remove -m %{module_name} -v %{version} --rpm_safe_upgrade --all ||:
 %_post_service gfs
 %_post_service rgmanager
 
-%postun -n %{libname}
-/sbin/ldconfig
+%postun -n %{libname} -p /sbin/ldconfig
 
-%post -n %{libname}
-/sbin/ldconfig
+%post -n %{libname} -p /sbin/ldconfig
 
 
 %preun
