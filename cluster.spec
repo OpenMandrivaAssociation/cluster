@@ -2,7 +2,7 @@
 %define module_name dkms-cluster
 %define major   1
 %define version 1.03.00
-%define release %mkrel 2
+%define release %mkrel 4
 %define libname %mklibname %name %major 
 
 Name:		%name
