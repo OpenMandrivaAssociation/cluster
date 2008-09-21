@@ -1,9 +1,13 @@
 %define name	cluster
-%define module_name dkms-cluster
-%define major   1
-%define version 1.03.00
-%define release %mkrel 4
-%define libname %mklibname %name %major 
+%define module_name gnbd
+%define major   2
+%define version 2.03.07
+%define release %mkrel 1
+%define cmanlibname %mklibname cman %major 
+%define cmanlibnamedevel %mklibname -d cman
+%define dlmlibname %mklibname dlm %major 
+%define dlmlibnamedevel %mklibname -d dlm
+%define _requires_exceptions perl\(VMware::VmPerl
 
 Name:		%name
 Version:	%{version}
@@ -20,55 +24,126 @@ Patch3: dkms-cluster-1.03.00-dkms.patch
 Url:		ftp://sources.redhat.com/pub/cluster/releases/
 Group:		System/Kernel and hardware
 Buildroot:	%{_tmppath}/%{name}-%{version}-root
-Buildrequires:	libxml2-devel, kernel-source
-Requires:	%{libname}
-Conflicts:	gfs, gfs-kernel,ccs,cman,cman-kernel,dlm,dlm-kernel,fence,gulm,magma,magma-plugins,rgmanager
-Requires(pre):		rpm-helper
-Requires(post):		rpm-helper
+Buildrequires:	libxml2-devel
+BuildRequires:	openais-devel
+BuildRequires:	volume_id-devel <= 126
+BuildRequires:	slang-devel
+BuildRequires:	libvirt-devel
+# For fence_xvm
+BuildRequires:	nss-devel
+#Requires:	%{libname}
+Requires:	gfs-utils cman rgmanager
 
 %description
 Redhat suite for clustered filesystems
 
-%package -n     %{libname}
-Summary:        Shared Librairies for GFS
+%package -n     %{cmanlibname}
+Summary:        Shared Librairies for Cluster Manager
 Group:          Development/Other
 
-%description  -n %{libname}
-Shared Librairies for cluster
+%description  -n %{cmanlibname}
+Shared Librairies for Cluster Manager
 
-%package -n %{name}-devel
-Summary:        GFS header files and static libraries
+%package -n %{cmanlibnamedevel}
+Summary:        Cluster Manager header files and static libraries
 Group:          Development/Other
 Requires:       %{name} = %{version}
-Requires:       %{libname} = %{version}
+Requires:       %{cmanlibname} = %{version}
 
-%description -n %{name}-devel
+%description -n %{cmanlibnamedevel}
+This package contains header files and static libraries.
+
+%package -n     %{dlmlibname}
+Summary:        Shared Librairies for the Distributed Lock Manager
+Group:          Development/Other
+
+%description  -n %{dlmlibname}
+Shared Librairies for cluster
+
+%package -n %{dlmlibnamedevel}
+Summary:        Distributed Lock Manager header files and static libraries
+Group:          Development/Other
+Requires:       %{name} = %{version}
+Requires:       %{dlmlibname} = %{version}
+
+%description -n %{dlmlibnamedevel}
 This package contains header files and static libraries.
 
 
-%package -n %{module_name}
+%package -n dkms-%{module_name}
 Summary:	Redhat's cluster suite kernel modules
 Group:          System/Kernel and hardware
 Requires(pre):  dkms
 Requires(post): dkms
 
-%description -n %{module_name}
+%description -n dkms-%{module_name}
 The dynamic kernel modules
+
+%package -n cman
+Group:		System/Kernel and hardware
+Summary:	Cluster Manager
+Requires(pre):		rpm-helper
+Requires(post):		rpm-helper
+
+%description -n cman
+Cluster Manager
+
+%package -n rgmanager
+Group:		System/Kernel and hardware
+Summary:	Resource Group Manager
+Requires(pre):		rpm-helper
+Requires(post):		rpm-helper
+
+%description -n rgmanager
+Resource Group Manager
+
+
+%package -n gfs-utils
+Group:		System/Kernel and hardware
+Summary:	Global Filesystem Utilities
+Requires:	gfs2-utils
+Requires(pre):		rpm-helper
+Requires(post):		rpm-helper
+
+%description -n gfs-utils
+Global Filesystem Utilities
+
+%package -n gfs2-utils
+Group:		System/Kernel and hardware
+Summary:	Global Filesystem Utilities
+Requires:	kmod(gfs2)
+Requires(pre):		rpm-helper
+Requires(post):		rpm-helper
+
+%description -n gfs2-utils
+Global Filesystem Utilities
+
+%package -n gnbd
+Group:		System/Kernel and hardware
+Summary:	Global Network Block Device utilities
+Requires:	kmod(gnbd)
+
+%description -n gnbd
+Global Network Block Device utilities
 
 %prep
 %setup -q -n %{name}-%{version}
-%patch1 -p1
-%patch2 -p1 -b .lccs
 cp Makefile Makefile.make
 
 %build
 
-./configure --kernel_src=/usr/src/linux \
+./configure \
 	--libdir=%{_libdir} \
 	--mandir=%{_mandir} \
 	--prefix=%{_prefix} \
 	--sbindir=%{_sbindir} \
-	--incdir=%{_includedir}
+	--incdir=%{_includedir} \
+	--without_kernel_modules \
+	--disable_kernel_check \
+	--nssincdir=%{_includedir}/nss \
+	--nsprincdir=%{_includedir}/nspr4 \
+	--enable_xen
+#--kernel_src=/usr/src/linux \
 
 #Fixing some weird harcoded path
 perl -pi -e 's|-DPLUGINDIR=\\\"\$\{plugindir\}\\\"|-DPLUGINDIR=\\"%{_libdir}/magma\\"|g' magma/lib/Makefile
@@ -85,61 +160,19 @@ mkdir -p $RPM_BUILD_ROOT/%{_includedir}
 mkdir -p $RPM_BUILD_ROOT/%{_initrddir}
 
 #BEGIN OF DKMS PART
-mkdir -p %{buildroot}/usr/src/%{module_name}-%{version}
-cp -a *-kernel configure %{buildroot}/usr/src/%{module_name}-%{version}
-cp Makefile.make %{buildroot}/usr/src/%{module_name}-%{version}/Makefile
-pushd .
-cd %{buildroot}/usr/src/%{module_name}-%{version}
-patch -p1 < %PATCH3
-make clean
-popd
-cat > %{buildroot}/usr/src/%{module_name}-%{version}/dkms.conf <<EOF
-PACKAGE_VERSION="%{version}"
-
+mkdir -p %{buildroot}/usr/src/%{module_name}-%{version}-%{release}
+cp -a gnbd-kernel/src/* %{buildroot}/usr/src/%{module_name}-%{version}-%{release}
+cat > %{buildroot}/usr/src/%{module_name}-%{version}-%{release}/dkms.conf <<EOF
+PACKAGE_VERSION="%{version}-%{release}"
 # Items below here should not have to change with each driver version
 PACKAGE_NAME="%{module_name}"
-MAKE[0]="cd \${dkms_tree}/\${PACKAGE_NAME}/\${PACKAGE_VERSION}/build ; ./configure --kernel_src=\${kernel_source_dir}; make"
-CLEAN="cd \${dkms_tree}/\${PACKAGE_NAME}/\${PACKAGE_VERSION}/build ; make clean"
+MAKE[0]="make -C \${kernel_source_dir} M=\${dkms_tree}/\${PACKAGE_NAME}/\${PACKAGE_VERSION}/build KERNELRELEASE=\${kernelver} USING_KBUILD=yes modules"
+CLEAN="make -C \${kernel_source_dir} M=\${dkms_tree}/\${PACKAGE_NAME}/\${PACKAGE_VERSION}/build KERNELRELEASE=\${kernelver} USING_KBUILD=yes clean"
 
-BUILT_MODULE_NAME[0]="cman"
-BUILT_MODULE_LOCATION[0]="build/module/cluster"
-DEST_MODULE_NAME[0]="cman"
-DEST_MODULE_LOCATION[0]="/kernel/cluster"
-
-BUILT_MODULE_NAME[1]="dlm"
-BUILT_MODULE_LOCATION[1]="build/module/cluster"
-DEST_MODULE_NAME[1]="dlm"
-DEST_MODULE_LOCATION[1]="/kernel/cluster"
-
-BUILT_MODULE_NAME[2]="lock_harness"
-BUILT_MODULE_LOCATION[2]="build/module/fs/gfs_locking/lock_harness"
-DEST_MODULE_NAME[2]="lock_harness"
-DEST_MODULE_LOCATION[2]="/kernel/fs/gfs_locking/lock_harness/"
-
-BUILT_MODULE_NAME[3]="lock_nolock"
-BUILT_MODULE_LOCATION[3]="build/module/fs/gfs_locking/lock_nolock"
-DEST_MODULE_NAME[3]="lock_nolock"
-DEST_MODULE_LOCATION[3]="/kernel/fs/gfs_locking/lock_nolock/"
-
-BUILT_MODULE_NAME[4]="lock_dlm"
-BUILT_MODULE_LOCATION[4]="build/module/fs/gfs_locking/lock_dlm"
-DEST_MODULE_NAME[4]="lock_dlm"
-DEST_MODULE_LOCATION[4]="/kernel/fs/gfs_locking/lock_dlm/"
-
-BUILT_MODULE_NAME[5]="lock_gulm"
-BUILT_MODULE_LOCATION[5]="build/module/fs/gfs_locking/lock_gulm"
-DEST_MODULE_NAME[5]="lock_gulm"
-DEST_MODULE_LOCATION[5]="/kernel/fs/gfs_locking/lock_gulm/"
-
-BUILT_MODULE_NAME[6]="gfs"
-BUILT_MODULE_LOCATION[6]="build/module/fs/gfs"
-DEST_MODULE_NAME[6]="gfs"
-DEST_MODULE_LOCATION[6]="/kernel/fs/gfs/"
-
-BUILT_MODULE_NAME[7]="gnbd"
-BUILT_MODULE_LOCATION[7]="build/module/drivers/block/gnbd/"
-DEST_MODULE_NAME[7]="gnbd"
-DEST_MODULE_LOCATION[7]="/kernel/drivers/block/gnbd/"
+BUILT_MODULE_NAME[0]="gnbd"
+BUILT_MODULE_LOCATION[0]=""
+DEST_MODULE_NAME[0]="gnbd"
+DEST_MODULE_LOCATION[0]="/kernel/drivers/block/gnbd/"
 
 REMAKE_INITRD="no"
 AUTOINSTALL=yes
@@ -150,94 +183,140 @@ EOF
 
 #BEGIN OF MAIN RPM
 perl -pi -e 's/BUILDDIR =.*/BUILDDIR =\$\{RPM_BUILD_ROOT\}/' Makefile
-make
-
-#Fixing some weird directory
-pushd $RPM_BUILD_ROOT
-mv man/* $RPM_BUILD_ROOT%{_mandir}
-mv *sh $RPM_BUILD_ROOT%{_datadir}/%{name}-%{version}
-mv lib/* $RPM_BUILD_ROOT%{_libdir} 
-mv etc/init.d/* $RPM_BUILD_ROOT/%{_initrddir}
-mv incdir/* $RPM_BUILD_ROOT/%{_includedir}
-
-#Removing unecessary files for runtime
-rm -f ocf-shellfuncs
-rm -f svclib_nfslock
-rm -rf module
-rm -rf incdir
-rm -rf slib 
-rm -rf lib
-rm -rf man
-rm -rf etc/init.d
-popd
-#END OF MAIN RPM
-
-#multiarch part
-%multiarch_includes $RPM_BUILD_ROOT%{_includedir}/magma-build.h
-#end of multiarch part
+%makeinstall_std
+mkdir -p %{buildroot}/%{_initrddir}
+mv %{buildroot}/%{_sysconfdir}/init.d/* %{buildroot}/%{_initrddir}
+mv %{buildroot}/usr/libexec/* %{buildroot}/%{_libdir}
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%post -n %{module_name}
-dkms add -m %{module_name} -v %{version} --rpm_safe_upgrade
-dkms build -m %{module_name} -v %{version} --rpm_safe_upgrade
-dkms install -m %{module_name} -v %{version} --rpm_safe_upgrade
+%post -n dkms-%{module_name}
+dkms add -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade
+dkms build -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade
+dkms install -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade
 
-%preun -n %{module_name}
-dkms remove -m %{module_name} -v %{version} --rpm_safe_upgrade --all ||:
+%preun -n dkms-%{module_name}
+dkms remove -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 
-%post
-%_post_service lock_gulmd
-%_post_service fenced
-%_post_service ccsd
-%_post_service cman
-%_post_service gfs
+%post -n rgmanager
 %_post_service rgmanager
 
-%if %mdkversion < 200900
-%postun -n %{libname} -p /sbin/ldconfig
-%endif
-
-%if %mdkversion < 200900
-%post -n %{libname} -p /sbin/ldconfig
-%endif
-
-
-%preun
-%_preun_service lock_gulmd
-%_preun_service fenced
-%_preun_service ccsd
-%_preun_service cman
-%_preun_service gfs
+%preun -n rgmanager
 %_preun_service rgmanager
 
-%files -n %{module_name}
-%defattr(-,root,root)
-%_usrsrc/%{module_name}-%{version}
+%post -n cman
+%_post_service cman
+%_post_service qdiskd
+%_post_service scsi_reserve
 
-%files -n %{name}-devel
-%defattr(-,root,root)
-%{_includedir}/*
-%multiarch %{multiarch_includedir}/magma-build.h
-%{_libdir}/*.a
+%preun -n cman
+%_preun_service cman
+%_preun_service qdiskd
+%_preun_service scsi_reserve
 
-%files -n %{libname}
+%post -n gfs-utils
+%_post_service gfs
+
+%preun -n gfs-utils
+%_preun_service gfs
+
+%post -n gfs2-utils
+%_post_service gfs
+
+%preun -n gfs2-utils
+%_preun_service gfs2
+
+%if %mdkversion < 200900
+%post -n %{dlmlibname} -p /sbin/ldconfig
+%post -n %{cmanlibname} -p /sbin/ldconfig
+%postun -n %{dlmlibname} -p /sbin/ldconfig
+%postun -n %{cmanlibname} -p /sbin/ldconfig
+%endif
+
+%files -n dkms-%{module_name}
 %defattr(-,root,root)
-%{_libdir}/*.so*
+%_usrsrc/%{module_name}-%{version}-%{release}
+
+%files -n %{cmanlibnamedevel}
+%defattr(-,root,root)
+%{_libdir}/*cman*.a
+%{_libdir}/*cman.so
+%{_includedir}/libcman.h
+
+%files -n %{dlmlibnamedevel}
+%defattr(-,root,root)
+%{_libdir}/*dlm*.a
+%{_libdir}/*dlm*.so
+%{_mandir}/man3/*dlm*.3.*
+%{_includedir}/libdlm.h
+
+%files -n %{cmanlibname}
+%defattr(-,root,root)
+%{_libdir}/*cman.so.%{major}*
+
+%files -n %{dlmlibname}
+%defattr(-,root,root)
+%{_libdir}/*dlm*.so.%{major}*
 
 %files
 %defattr(-,root,root)
-%{_initrddir}/ccsd
-%{_initrddir}/cman
-%{_initrddir}/fenced
-%{_initrddir}/gfs
-%{_initrddir}/lock_gulmd
+%{_datadir}/doc/%name
+%exclude %{_includedir}/ccs.h
+%exclude %{_libdir}/libccs.a
+
+%files -n rgmanager
+%defattr(-,root,root)
 %{_initrddir}/rgmanager
+%{_sbindir}/clu*
+%{_sbindir}/rg_test
+%{_datadir}/cluster
+%{_mandir}/man8/clu*.8.*
+
+%files -n cman
+%defattr(-,root,root)
+%{_initrddir}/cman
 %{_initrddir}/qdiskd
-%{_libdir}/magma
-%{_datadir}/%{name}-%{version}
-%{_mandir}/man?/*
-/sbin/*
+%{_initrddir}/scsi_reserve
+%{_sbindir}/cman*
+%{_sbindir}/fence*
+%{_sbindir}/dlm*
+%{_sbindir}/ccs*
+%{_sbindir}/group*
+%{_sbindir}/*qdisk*
+%attr(0755,root,root) %{_datadir}/fence
+%{_datadir}/snmp/mibs/*.mib
+%{_libdir}/lcrso/service_cman.lcrso
+%config/etc/udev/rules.d/51-dlm.rules
+%{_mandir}/man8/cman*.8.*
+%{_mandir}/man5/cman.5.*
+%{_mandir}/man5/cluster.conf.5.*
+%{_mandir}/man5/qdisk.5.*
+%{_mandir}/man8/fence*.8.*
+%{_mandir}/man8/dlm*.8.*
+%{_mandir}/man8/ccs*.8.*
+%{_mandir}/man7/ccs.7.*
+%{_mandir}/man8/*group*.8.*
+%{_mandir}/man8/*qdisk*.8.*
 
+%files -n gfs-utils
+%defattr(-,root,root)
+/sbin/*.gfs
+%{_sbindir}/*.gfs
+%{_sbindir}/gfs_*
+%{_initrddir}/gfs
+%{_mandir}/man8/gfs_*.8.*
+%{_mandir}/man8/gfs.8.*
 
+%files -n gfs2-utils
+%defattr(-,root,root)
+%{_sbindir}/*.gfs2
+/sbin/*.gfs2
+%{_sbindir}/gfs2_*
+%{_initrddir}/gfs2
+%{_mandir}/man8/*gfs2*.8.*
+
+%files -n gnbd
+%defattr(-,root,root)
+%{_sbindir}/gnbd_*
+%{_mandir}/man8/gnbd*.8.*
