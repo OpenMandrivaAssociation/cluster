@@ -17,8 +17,7 @@ License:	GPL
 Source:		ftp://sources.redhat.com/pub/cluster/releases/%{name}-%{version}.tar.gz
 
 # Remove apc_snmp, as its compilation is broken
-Patch1: cluster-1.02.99-nosnmp.patch
-Patch2: cluster-1.03.00-lccs.patch
+Patch: cluster-2.03.07-fix-cman-init.patch
 # gw trim dkms build system
 Patch3: dkms-cluster-1.03.00-dkms.patch
 Url:		ftp://sources.redhat.com/pub/cluster/releases/
@@ -47,8 +46,8 @@ Shared Librairies for Cluster Manager
 %package -n %{cmanlibnamedevel}
 Summary:        Cluster Manager header files and static libraries
 Group:          Development/Other
-Requires:       %{name} = %{version}
 Requires:       %{cmanlibname} = %{version}
+Provides:	cman-devel = %{version}
 
 %description -n %{cmanlibnamedevel}
 This package contains header files and static libraries.
@@ -60,11 +59,19 @@ Group:          Development/Other
 %description  -n %{dlmlibname}
 Shared Librairies for cluster
 
+%package devel
+Summary:        Cluster Manager header files and static libraries
+Group:          Development/Other
+Requires:	dlm-devel cman-devel
+
+%description devel
+Cluster Manager header files and static libraries
+
 %package -n %{dlmlibnamedevel}
 Summary:        Distributed Lock Manager header files and static libraries
 Group:          Development/Other
-Requires:       %{name} = %{version}
 Requires:       %{dlmlibname} = %{version}
+Provides:	dlm-devel = %{version}
 
 %description -n %{dlmlibnamedevel}
 This package contains header files and static libraries.
@@ -82,6 +89,7 @@ The dynamic kernel modules
 %package -n cman
 Group:		System/Kernel and hardware
 Summary:	Cluster Manager
+Requires:	openais libxml2-utils
 Requires(pre):		rpm-helper
 Requires(post):		rpm-helper
 
@@ -128,6 +136,7 @@ Global Network Block Device utilities
 
 %prep
 %setup -q -n %{name}-%{version}
+%patch -p1 -b .orig
 cp Makefile Makefile.make
 
 %build
@@ -152,12 +161,14 @@ perl -pi -e 's|-DPLUGINDIR=\\\"\$\{plugindir\}\\\"|-DPLUGINDIR=\\"%{_libdir}/mag
 make
 
 %install
-rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/%{_mandir}
-mkdir -p $RPM_BUILD_ROOT/%{_datadir}/%{name}-%{version}
-mkdir -p $RPM_BUILD_ROOT/%{_libdir}
-mkdir -p $RPM_BUILD_ROOT/%{_includedir}
-mkdir -p $RPM_BUILD_ROOT/%{_initrddir}
+rm -rf %{buildroot}
+mkdir -p %{buildroot}/%{_mandir}
+mkdir -p %{buildroot}/%{_datadir}/%{name}-%{version}
+mkdir -p %{buildroot}/%{_libdir}
+mkdir -p %{buildroot}/%{_includedir}
+mkdir -p %{buildroot}/%{_initrddir}
+mkdir -p %{buildroot}/%{_initrddir}
+mkdir -p %{buildroot}/etc/cluster
 
 #BEGIN OF DKMS PART
 mkdir -p %{buildroot}/usr/src/%{module_name}-%{version}-%{release}
@@ -259,7 +270,7 @@ dkms remove -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade --all 
 %defattr(-,root,root)
 %{_libdir}/*dlm*.so.%{major}*
 
-%files
+%files devel
 %defattr(-,root,root)
 %{_datadir}/doc/%name
 %exclude %{_includedir}/ccs.h
@@ -284,6 +295,8 @@ dkms remove -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade --all 
 %{_sbindir}/ccs*
 %{_sbindir}/group*
 %{_sbindir}/*qdisk*
+%{_sbindir}/gfs_controld
+%dir /etc/cluster
 %attr(0755,root,root) %{_datadir}/fence
 %{_datadir}/snmp/mibs/*.mib
 %{_libdir}/lcrso/service_cman.lcrso
@@ -304,6 +317,7 @@ dkms remove -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade --all 
 /sbin/*.gfs
 %{_sbindir}/*.gfs
 %{_sbindir}/gfs_*
+%exclude %{_sbindir}/gfs_controld
 %{_initrddir}/gfs
 %{_mandir}/man8/gfs_*.8.*
 %{_mandir}/man8/gfs.8.*
