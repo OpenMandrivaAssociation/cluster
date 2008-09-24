@@ -27,6 +27,7 @@ Buildrequires:	libxml2-devel
 BuildRequires:	openais-devel
 BuildRequires:	volume_id-devel <= 126
 BuildRequires:	slang-devel
+BuildRequires:	ncurses-devel
 BuildRequires:	libvirt-devel
 # For fence_xvm
 BuildRequires:	nss-devel
