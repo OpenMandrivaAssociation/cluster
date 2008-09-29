@@ -2,7 +2,7 @@
 %define module_name gnbd
 %define major   2
 %define version 2.03.07
-%define release %mkrel 1
+%define release %mkrel 2
 %define cmanlibname %mklibname cman %major 
 %define cmanlibnamedevel %mklibname -d cman
 %define dlmlibname %mklibname dlm %major 
@@ -19,8 +19,8 @@ Source1:	gfs-2.6.18-2.6.23.patch
 
 # Remove apc_snmp, as its compilation is broken
 Patch: cluster-2.03.07-fix-cman-init.patch
-# gw trim dkms build system
-Patch3: dkms-cluster-1.03.00-dkms.patch
+Patch1: cluster-2.03.07-kernel-2.6.25.patch
+
 Url:		ftp://sources.redhat.com/pub/cluster/releases/
 Group:		System/Kernel and hardware
 Buildroot:	%{_tmppath}/%{name}-%{version}-root
@@ -151,6 +151,9 @@ Global Network Block Device utilities
 %prep
 %setup -q -n %{name}-%{version}
 %patch -p1 -b .orig
+%if %mdkversion <= 200810
+%patch1 -p1 -b .kernel2625
+%endif
 cp Makefile Makefile.make
 
 %build
