@@ -15,6 +15,7 @@ Release:	%{release}
 Summary:	Redhat suite for clustered filesystems
 License:	GPL
 Source:		ftp://sources.redhat.com/pub/cluster/releases/%{name}-%{version}.tar.gz
+Source1:	gfs-2.6.18-2.6.23.patch
 
 # Remove apc_snmp, as its compilation is broken
 Patch: cluster-2.03.07-fix-cman-init.patch
@@ -86,6 +87,18 @@ Requires(post): dkms
 
 %description -n dkms-%{module_name}
 The dynamic kernel modules
+
+%package -n dkms-gfs
+Summary:	Global File System Kernel Driver
+Group:          System/Kernel and hardware
+Requires(pre):  dkms
+Requires(post): dkms
+
+%description -n dkms-gfs
+The dynamic kernel module package for Global File System
+
+This package is only required for kernels older than 2.6.24
+(newer kernels ship with a gfs driver)
 
 %package -n cman
 Group:		System/Kernel and hardware
@@ -191,6 +204,32 @@ AUTOINSTALL=yes
 POST_INSTALL="post-install"
 POST_REMOVE="post-remove"
 EOF
+
+# GFS driver
+mkdir -p %{buildroot}/usr/src/gfs-%{version}-%{release}/patches
+cp -a gfs-kernel/src/* %{buildroot}/usr/src/gfs-%{version}-%{release}
+install -m644 %{SOURCE1} %{buildroot}/usr/src/gfs-%{version}-%{release}/patches
+cat > %{buildroot}/usr/src/gfs-%{version}-%{release}/dkms.conf <<EOF
+PACKAGE_VERSION="%{version}-%{release}"
+# Items below here should not have to change with each driver version
+PACKAGE_NAME="gfs"
+MAKE[0]="make -C \${kernel_source_dir} M=\${dkms_tree}/\${PACKAGE_NAME}/\${PACKAGE_VERSION}/build/gfs KERNELRELEASE=\${kernelver} USING_KBUILD=yes modules"
+CLEAN="make -C \${kernel_source_dir} M=\${dkms_tree}/\${PACKAGE_NAME}/\${PACKAGE_VERSION}/build/gfs KERNELRELEASE=\${kernelver} USING_KBUILD=yes clean"
+
+PATCH[0]=gfs-2.6.18-2.6.23.patch
+PATCH_MATCH[0]="^2.6.(1[8-9]|2[0-3])"
+
+BUILT_MODULE_NAME[0]="gfs"
+BUILT_MODULE_LOCATION[0]="gfs"
+DEST_MODULE_NAME[0]="gfs"
+DEST_MODULE_LOCATION[0]="/kernel/drivers/block/gfs/"
+BUILD_EXCLUSIVE_KERNEL="^2.6.(1[0-9]|2[0-3])"
+
+REMAKE_INITRD="no"
+AUTOINSTALL=yes
+POST_INSTALL="post-install"
+POST_REMOVE="post-remove"
+EOF
 # END OF DKMS STUFF
 
 #BEGIN OF MAIN RPM
@@ -210,6 +249,14 @@ dkms install -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade
 
 %preun -n dkms-%{module_name}
 dkms remove -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade --all ||:
+
+%post -n dkms-gfs
+dkms add -m gfs -v %{version}-%{release} --rpm_safe_upgrade
+dkms build -m gfs -v %{version}-%{release} --rpm_safe_upgrade
+dkms install -m gfs -v %{version}-%{release} --rpm_safe_upgrade
+
+%preun -n dkms-gfs
+dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 
 %post -n rgmanager
 %_post_service rgmanager
@@ -249,6 +296,10 @@ dkms remove -m %{module_name} -v %{version}-%{release} --rpm_safe_upgrade --all 
 %files -n dkms-%{module_name}
 %defattr(-,root,root)
 %_usrsrc/%{module_name}-%{version}-%{release}
+
+%files -n dkms-gfs
+%defattr(-,root,root)
+%_usrsrc/gfs-%{version}-%{release}
 
 %files -n %{cmanlibnamedevel}
 %defattr(-,root,root)
