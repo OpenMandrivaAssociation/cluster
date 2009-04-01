@@ -1,8 +1,8 @@
 %define name	cluster
 %define module_name gnbd
 %define major   2
-%define version 2.03.07
-%define release %mkrel 2
+%define version 2.03.11
+%define release %mkrel 1
 %define cmanlibname %mklibname cman %major 
 %define cmanlibnamedevel %mklibname -d cman
 %define dlmlibname %mklibname dlm %major 
@@ -26,7 +26,7 @@ Group:		System/Kernel and hardware
 Buildroot:	%{_tmppath}/%{name}-%{version}-root
 Buildrequires:	libxml2-devel
 BuildRequires:	openais-devel
-BuildRequires:	volume_id-devel <= 126
+BuildRequires:	volume_id-devel
 BuildRequires:	slang-devel
 BuildRequires:	ncurses-devel
 BuildRequires:	libvirt-devel
