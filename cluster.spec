@@ -2,7 +2,7 @@
 %define module_name gnbd
 %define major   2
 %define version 2.03.11
-%define release %mkrel 1
+%define release %mkrel 2
 %define cmanlibname %mklibname cman %major 
 %define cmanlibnamedevel %mklibname -d cman
 %define dlmlibname %mklibname dlm %major 
@@ -20,6 +20,7 @@ Source1:	gfs-2.6.18-2.6.23.patch
 # Remove apc_snmp, as its compilation is broken
 Patch: cluster-2.03.07-fix-cman-init.patch
 Patch1: cluster-2.03.07-kernel-2.6.25.patch
+Patch2: cluster-2.03.11-gfs-should-start-clvmd.patch
 
 Url:		ftp://sources.redhat.com/pub/cluster/releases/
 Group:		System/Kernel and hardware
@@ -151,6 +152,7 @@ Global Network Block Device utilities
 %prep
 %setup -q -n %{name}-%{version}
 %patch -p1 -b .orig
+%patch2 -p1 -b .shouldstartclvmd
 %if %mdkversion <= 200810
 %patch1 -p1 -b .kernel2625
 %endif
