@@ -2,7 +2,7 @@
 %define module_name gnbd
 %define major   2
 %define version 2.03.11
-%define release %mkrel 2
+%define release %mkrel 3
 %define cmanlibname %mklibname cman %major 
 %define cmanlibnamedevel %mklibname -d cman
 %define dlmlibname %mklibname dlm %major 
