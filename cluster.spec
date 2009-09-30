@@ -199,6 +199,7 @@ Group:		System/Kernel and hardware
 Summary:	Resource Group Manager
 Requires(pre):		rpm-helper
 Requires(post):		rpm-helper
+Requires:		fence-agents resource-agents
 
 %description -n rgmanager
 Resource Group Manager
