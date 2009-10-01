@@ -1,7 +1,7 @@
 %define name	cluster
 %define module_name gnbd
 %define major   3
-%define version 3.0.2
+%define version 3.0.3
 %define release %mkrel 1
 %define cmanlibname %mklibname cman %major 
 %define cmanlibnamedevel %mklibname -d cman
@@ -35,7 +35,7 @@ Url:		ftp://sources.redhat.com/pub/cluster/releases/
 Group:		System/Kernel and hardware
 Buildroot:	%{_tmppath}/%{name}-%{version}-root
 Buildrequires:	libxml2-devel
-BuildRequires:	openais-devel
+BuildRequires:	openais-devel >= 1.1.0
 BuildRequires:	slang-devel
 BuildRequires:	ncurses-devel
 BuildRequires:	libvirt-devel
@@ -144,7 +144,9 @@ Static Development libraries for cluster fencing
 %package devel
 Summary:        Cluster Manager header files and static libraries
 Group:          Development/Other
-Requires:	dlm-devel cman-devel
+Requires:	dlm-devel = %{version} cman-devel = %{version} 
+Requires:	logthread-devel = %{version} fence-devel = %{version}
+Requires:	ccs-devel = %{version}
 
 %description devel
 Cluster Manager header files and static libraries
@@ -184,7 +186,7 @@ This package is only required for kernels older than 2.6.24
 %package -n cman
 Group:		System/Kernel and hardware
 Summary:	Cluster Manager
-Requires:	openais >= 1.0.1 libxml2-utils fence-agents
+Requires:	openais >= 1.1.0 libxml2-utils fence-agents
 Requires(pre):		rpm-helper
 Requires(post):		rpm-helper
 # Try and ensure we upgrade packages that depend on cman
@@ -225,6 +227,7 @@ Requires(post):		rpm-helper
 %description -n gfs2-utils
 Global Filesystem Utilities
 
+%if %build_gnbd
 %package -n gnbd
 Group:		System/Kernel and hardware
 Summary:	Global Network Block Device utilities
@@ -232,6 +235,7 @@ Requires:	kmod(gnbd)
 
 %description -n gnbd
 Global Network Block Device utilities
+%endif
 
 %prep
 %setup -q -n %{name}-%{version}
