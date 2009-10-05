@@ -41,6 +41,8 @@ BuildRequires:	ncurses-devel
 BuildRequires:	libvirt-devel
 # For fence_xvm
 BuildRequires:	nss-devel
+# For ldap configuration support
+BuildRequires:	openldap-devel
 #Requires:	%{libname}
 Requires:	gfs-utils cman rgmanager
 
