@@ -43,6 +43,8 @@ BuildRequires:	libvirt-devel
 BuildRequires:	nss-devel
 # For ldap configuration support
 BuildRequires:	openldap-devel
+# For perl binding
+BuildRequires:	perl-devel
 #Requires:	%{libname}
 Requires:	gfs-utils cman rgmanager
 
