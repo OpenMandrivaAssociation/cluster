@@ -23,7 +23,7 @@ Version:	%{version}
 Release:	%{release}
 Summary:	Redhat suite for clustered filesystems
 License:	GPL
-Source:		ftp://sources.redhat.com/pub/cluster/releases/%{name}-%{version}.tar.gz
+Source:		https://fedorahosted.org/releases/c/l/cluster/cluster-%{version}.tar.gz
 Source1:	gfs-2.6.18-2.6.23.patch
 
 # Remove apc_snmp, as its compilation is broken
