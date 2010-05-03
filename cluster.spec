@@ -1,7 +1,7 @@
 %define name	cluster
 %define module_name gnbd
 %define major   3
-%define version 3.0.6
+%define version 3.0.11
 %define release %mkrel 1
 %define cmanlibname %mklibname cman %major 
 %define cmanlibnamedevel %mklibname -d cman
@@ -210,7 +210,7 @@ Requires:		fence-agents resource-agents
 %description -n rgmanager
 Resource Group Manager
 
-
+%if 0
 %package -n gfs-utils
 Group:		System/Kernel and hardware
 Summary:	Global Filesystem Utilities
@@ -221,6 +221,7 @@ Requires(post):		rpm-helper
 %description -n gfs-utils
 Global Filesystem Utilities
 
+%endif
 %package -n gfs2-utils
 Group:		System/Kernel and hardware
 Summary:	Global Filesystem Utilities
@@ -376,11 +377,14 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %_preun_service qdiskd
 %_preun_service scsi_reserve
 
+%if 0
 %post -n gfs-utils
 %_post_service gfs
 
 %preun -n gfs-utils
 %_preun_service gfs
+
+%endif
 
 %post -n gfs2-utils
 %_post_service gfs
@@ -499,7 +503,7 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %{_sbindir}/ccs*
 %{_sbindir}/group*
 %{_sbindir}/*qdisk*
-%{_sbindir}/gfs_controld
+%{_sbindir}/gfs_control*
 %{_sbindir}/confdb2ldif
 %dir /etc/cluster
 %config(noreplace) %{_sysconfdir}/logrotate.d/cluster
@@ -519,9 +523,11 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/*group*.8.*
 %{_mandir}/man8/*qdisk*.8.*
 %{_mandir}/man8/confdb2ldif.8.*
+%{_mandir}/man8/gfs_control*.8.*
 %doc doc/usage.txt
 %doc config/plugins/ldap/99cluster.ldif
 
+%if 0
 %files -n gfs-utils
 %defattr(-,root,root)
 /sbin/*.gfs
@@ -530,6 +536,7 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %{_initrddir}/gfs
 %{_mandir}/man8/gfs_*.8.*
 %{_mandir}/man8/*gfs.8.*
+%endif
 
 %files -n gfs2-utils
 %defattr(-,root,root)
