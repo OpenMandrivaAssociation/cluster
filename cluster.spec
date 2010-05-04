@@ -31,7 +31,7 @@ Patch: cluster-2.03.07-fix-cman-init.patch
 Patch1: cluster-2.03.07-kernel-2.6.25.patch
 Patch2: cluster-2.03.11-gfs-should-start-clvmd.patch
 
-Url:		ftp://sources.redhat.com/pub/cluster/releases/
+Url:		http://sources.redhat.com/cluster/wiki
 Group:		System/Kernel and hardware
 Buildroot:	%{_tmppath}/%{name}-%{version}-root
 Buildrequires:	libxml2-devel
