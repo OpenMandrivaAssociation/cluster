@@ -508,6 +508,7 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %{_sbindir}/confdb2ldif
 %dir /etc/cluster
 %config(noreplace) %{_sysconfdir}/logrotate.d/cluster
+%config(noreplace) %{_sysconfdir}/cluster/fence_na.conf
 %dir /var/log/cluster
 #attr(0755,root,root) %{_datadir}/fence
 #{_datadir}/snmp/mibs/*.mib
