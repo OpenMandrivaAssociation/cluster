@@ -491,6 +491,7 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %{_sbindir}/rg_test
 %{_datadir}/cluster
 %{_mandir}/man8/clu*.8.*
+%{_mandir}/man8/rgmanager.8.*
 
 %files -n cman
 %defattr(-,root,root)
