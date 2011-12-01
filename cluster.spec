@@ -334,14 +334,14 @@ EOF
 # END OF DKMS STUFF
 
 #BEGIN OF MAIN RPM
-perl -pi -e 's/BUILDDIR =.*/BUILDDIR =\$\{RPM_BUILD_ROOT\}/' Makefile
+perl -pi -e "s|BUILDDIR =.*|BUILDDIR = %{buildroot}|g" Makefile
 %makeinstall_std
 mkdir -p %{buildroot}/%{_initrddir}
 mv %{buildroot}/%{_sysconfdir}/init.d/* %{buildroot}/%{_initrddir}
 mv %{buildroot}/usr/libexec/* %{buildroot}/%{_libdir}
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 
 %if %build_gnbd
 %post -n dkms-%{module_name}
