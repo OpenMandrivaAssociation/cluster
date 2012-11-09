@@ -1,0 +1,24 @@
+diff -p -up cluster-2.03.11/gfs2/init.d/gfs2.in.shouldstartclvmd cluster-2.03.11/gfs2/init.d/gfs2
+--- cluster-2.03.11/gfs2/init.d/gfs2.in.shouldstartclvmd	2009-01-22 14:33:51.000000000 +0200
++++ cluster-2.03.11/gfs2/init.d/gfs2.in	2009-04-07 15:28:29.000000000 +0200
+@@ -9,6 +9,8 @@
+ # Provides:		gfs2
+ # Required-Start:	$network cman
+ # Required-Stop:	$network cman
++# Should-Start:		clvmd
++# Should-Stop:		clvmd
+ # Default-Start:
+ # Default-Stop:
+ # Short-Description:	mount/unmount gfs2 filesystems configured in /etc/fstab
+diff -p -up cluster-2.03.11/gfs/init.d/gfs.in.shouldstartclvmd cluster-2.03.11/gfs/init.d/gfs
+--- cluster-2.03.11/gfs/init.d/gfs.in.shouldstartclvmd	2009-01-22 14:33:51.000000000 +0200
++++ cluster-2.03.11/gfs/init.d/gfs.in	2009-04-07 15:27:46.000000000 +0200
+@@ -9,6 +9,8 @@
+ # Provides:		gfs
+ # Required-Start:	$network cman
+ # Required-Stop:	$network cman
++# Should-Start:		clvmd
++# Should-Stop:		clvmd
+ # Default-Start:
+ # Default-Stop:
+ # Short-Description:	mount/unmount gfs filesystems configured in /etc/fstab
