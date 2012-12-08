@@ -2,7 +2,7 @@
 %define module_name gnbd
 %define major   3
 %define version 3.0.17
-%define release %mkrel 3
+%define release %mkrel 5
 %define cmanlibname %mklibname cman %major 
 %define cmanlibnamedevel %mklibname -d cman
 %define dlmlibname %mklibname dlm %major 
@@ -334,14 +334,14 @@ EOF
 # END OF DKMS STUFF
 
 #BEGIN OF MAIN RPM
-perl -pi -e "s|BUILDDIR =.*|BUILDDIR = %{buildroot}|g" Makefile
+perl -pi -e 's/BUILDDIR =.*/BUILDDIR =\$\{RPM_BUILD_ROOT\}/' Makefile
 %makeinstall_std
 mkdir -p %{buildroot}/%{_initrddir}
 mv %{buildroot}/%{_sysconfdir}/init.d/* %{buildroot}/%{_initrddir}
 mv %{buildroot}/usr/libexec/* %{buildroot}/%{_libdir}
 
 %clean
-rm -rf %{buildroot}
+rm -rf $RPM_BUILD_ROOT
 
 %if %build_gnbd
 %post -n dkms-%{module_name}
@@ -552,3 +552,127 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 #{_sbindir}/gnbd_*
 #{_mandir}/man8/gnbd*.8.*
 %endif
+
+
+%changelog
+* Tue May 03 2011 Oden Eriksson <oeriksson@mandriva.com> 3.0.17-2mdv2011.0
++ Revision: 663384
+- mass rebuild
+
+* Wed Oct 13 2010 Buchan Milne <bgmilne@mandriva.org> 3.0.17-1mdv2011.0
++ Revision: 585374
+- update to new version 3.0.17
+
+* Tue Sep 07 2010 Buchan Milne <bgmilne@mandriva.org> 3.0.16-1mdv2011.0
++ Revision: 576571
+- update to new version 3.0.16
+- Add rgmanager man page to files list
+
+* Sun Aug 01 2010 Funda Wang <fwang@mandriva.org> 3.0.11-3mdv2011.0
++ Revision: 564231
+- rebuild for perl 5.12.1
+
+  + Jérôme Quelin <jquelin@mandriva.org>
+    - rebuild
+
+* Tue May 04 2010 Buchan Milne <bgmilne@mandriva.org> 3.0.11-1mdv2010.1
++ Revision: 541951
+- Fix URL
+- New version 3.0.11
+- Drop gfs1 bits
+
+* Mon Jan 04 2010 Buchan Milne <bgmilne@mandriva.org> 3.0.6-1mdv2010.1
++ Revision: 486142
+- update to new version 3.0.6
+
+* Wed Dec 02 2009 Buchan Milne <bgmilne@mandriva.org> 3.0.5-1mdv2010.1
++ Revision: 472548
+- New version 3.0.5
+
+* Fri Nov 20 2009 Buchan Milne <bgmilne@mandriva.org> 3.0.4-1mdv2010.1
++ Revision: 467603
+- update to new version 3.0.4
+
+* Mon Oct 05 2009 Buchan Milne <bgmilne@mandriva.org> 3.0.3-1mdv2010.0
++ Revision: 453853
+- Buildrequire perl-devel for perl binding
+- Buildrequire openldap-devel
+- New version 3.0.3
+- buildrequire openais-devel 1.1.0
+- add more requires to cluster-devel
+- rgmanager should require resource-agents and fence-agents
+- New version 3.0.2
+- disable gnbd for now
+- split more libs out
+- split agents out (as done upstream)
+
+* Sun Aug 09 2009 Oden Eriksson <oeriksson@mandriva.com> 2.03.11-3mdv2010.0
++ Revision: 413256
+- rebuild
+
+* Tue Apr 07 2009 Buchan Milne <bgmilne@mandriva.org> 2.03.11-2mdv2009.1
++ Revision: 364890
+- Fix one more path in cman init script
+- Make gfs init scripts should-start clvmd
+
+* Wed Apr 01 2009 Buchan Milne <bgmilne@mandriva.org> 2.03.11-1mdv2009.1
++ Revision: 363145
+- New version 2.03.11
+
+* Mon Sep 29 2008 Buchan Milne <bgmilne@mandriva.org> 2.03.07-2mdv2009.0
++ Revision: 289564
+- Fix build on 2008.1
+- Add dkms-gfs package with suitable patches to build gfs driver on Xen
+
+* Wed Sep 24 2008 Buchan Milne <bgmilne@mandriva.org> 2.03.07-1mdv2009.0
++ Revision: 287787
+- Fix some paths in the cman init script
+- Add a cluster-devel package for the ccs.h files and requiring dlm-devel and cman-devel
+- New version 2.03.07
+- Rework package
+
+  + Thierry Vignaud <tv@mandriva.org>
+    - rebuild
+    - kill re-definition of %%buildroot on Pixel's request
+
+  + Pixel <pixel@mandriva.com>
+    - do not call ldconfig in %%post/%%postun, it is now handled by filetriggers
+    - normalize call to ldconfig in %%post/%%postun
+
+  + Olivier Blin <oblin@mandriva.com>
+    - restore BuildRoot
+
+* Fri Jun 22 2007 Thierry Vignaud <tv@mandriva.org> 1.03.00-2mdv2008.0
++ Revision: 42954
+- fix more groups
+
+
+* Wed Dec 13 2006 Götz Waschk <waschk@mandriva.org> 1.03.00-2mdv2007.0
++ Revision: 96346
+- remove useless sources and binaries from the dkms package
+- fix deps of dkms package
+
+  + Andreas Hasenack <andreas@mandriva.com>
+    - updated to version 1.03.00
+    - added lccs patch so it won't take the libccs.so library
+      from the installed system
+    - added requires for libxml2-devel to the dkms package because
+      it's needed at runtime to build the module (!)
+
+  + ehabkost <ehabkost>
+    - Import cluster
+
+* Thu Aug 17 2006 Eduardo Habkost <ehabkost@mandriva.com> 1.02.99-cvs20060816-1mdk
+- Updating to CVS STABLE version as of 2006-08-16
+- Removing apc_snmp, as its compilation is broken
+
+* Thu Oct 27 2005 Erwan Velu <erwan@seanodes.com> 1.01.00-3mdk
+- Ooups, fixing wrong requires
+
+* Thu Oct 27 2005 Erwan Velu <erwan@seanodes.com> 1.01.00-2mdk
+- Fixing libs
+- A clean libification is not really possible, ccsd is using the libmagma.so :(
+
+* Fri Oct 21 2005 Erwan Velu <erwan@seanodes.com> 1.01.00-1mdk
+- Initial Release
+

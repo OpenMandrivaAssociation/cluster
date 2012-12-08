@@ -1,0 +1,1644 @@
+--- gfs-2.03.07/gfs/eaops.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/eaops.c	2008-09-29 11:29:39.000000000 +0200
+@@ -48,6 +48,77 @@
+ }
+ 
+ /**
++ * user_eo_get -
++ * @ip:
++ * @er:
++ *
++ * Returns: errno
++ */
++
++static int
++user_eo_get(struct gfs_inode *ip, struct gfs_ea_request *er)
++{
++	{
++		struct inode *inode = ip->i_vnode;
++		int error = permission(inode, MAY_READ, NULL);
++		if (error)
++			return error;
++	}
++
++	return gfs_ea_get_i(ip, er);
++}
++
++/**
++ * user_eo_set -
++ * @ip:
++ * @er:
++ *
++ * Returns: errno
++ */
++
++static int
++user_eo_set(struct gfs_inode *ip, struct gfs_ea_request *er)
++{
++	{
++		struct inode *inode = ip->i_vnode;
++		if (S_ISREG(inode->i_mode) ||
++		    (S_ISDIR(inode->i_mode) && !(inode->i_mode & S_ISVTX))) {
++			int error = permission(inode, MAY_WRITE, NULL);
++			if (error)
++				return error;
++		} else
++			return -EPERM;
++	}
++
++	return gfs_ea_set_i(ip, er);
++}
++
++/**
++ * user_eo_remove -
++ * @ip:
++ * @er:
++ *
++ * Returns: errno
++ */
++
++static int
++user_eo_remove(struct gfs_inode *ip, struct gfs_ea_request *er)
++{
++	{
++		struct inode *inode = ip->i_vnode;
++		if (S_ISREG(inode->i_mode) ||
++		    (S_ISDIR(inode->i_mode) && !(inode->i_mode & S_ISVTX))) {
++			int error = permission(inode, MAY_WRITE, NULL);
++			if (error)
++				return error;
++		} else
++			return -EPERM;
++	}
++
++	return gfs_ea_remove_i(ip, er);
++}
++
++/**
+  * system_eo_get -
+  * @ip:
+  * @er:
+@@ -143,10 +214,67 @@
+ 	return gfs_ea_remove_i(ip, er);	
+ }
+ 
++/**
++ * security_eo_get -
++ * @ip:
++ * @er:
++ *
++ * Returns: errno
++ */
++
++static int
++security_eo_get(struct gfs_inode *ip, struct gfs_ea_request *er)
++{
++	struct inode *inode = ip->i_vnode;
++	int error = permission(inode, MAY_READ, NULL);
++	if (error)
++		return error;
++
++	return gfs_ea_get_i(ip, er);
++}
++
++/**
++ * security_eo_set -
++ * @ip:
++ * @er:
++ *
++ * Returns: errno
++ */
++
++static int
++security_eo_set(struct gfs_inode *ip, struct gfs_ea_request *er)
++{
++	struct inode *inode = ip->i_vnode;
++	int error = permission(inode, MAY_WRITE, NULL);
++	if (error)
++		return error;
++
++	return gfs_ea_set_i(ip, er);
++}
++
++/**
++ * security_eo_remove -
++ * @ip:
++ * @er:
++ *
++ * Returns: errno
++ */
++
++static int
++security_eo_remove(struct gfs_inode *ip, struct gfs_ea_request *er)
++{
++	struct inode *inode = ip->i_vnode;
++	int error = permission(inode, MAY_WRITE, NULL);
++	if (error)
++		return error;
++
++	return gfs_ea_remove_i(ip, er);
++}
++
+ struct gfs_eattr_operations gfs_user_eaops = {
+-	.eo_get = gfs_ea_get_i,
+-	.eo_set = gfs_ea_set_i,
+-	.eo_remove = gfs_ea_remove_i,
++	.eo_get = user_eo_get,
++	.eo_set = user_eo_set,
++	.eo_remove = user_eo_remove,
+ 	.eo_name = "user",
+ };
+ 
+@@ -158,9 +286,9 @@
+ };
+ 
+ struct gfs_eattr_operations gfs_security_eaops = {
+-	.eo_get = gfs_ea_get_i,
+-	.eo_set = gfs_ea_set_i,
+-	.eo_remove = gfs_ea_remove_i,
++	.eo_get = security_eo_get,
++	.eo_set = security_eo_set,
++	.eo_remove = security_eo_remove,
+ 	.eo_name = "security",
+ };
+ 
+@@ -171,3 +299,4 @@
+ 	&gfs_security_eaops,
+ };
+ 
++
+diff -ur gfs/gfs.h gfs/gfs.h
+--- gfs-2.03.07/gfs/gfs.h	2008-08-14 13:11:40.000000000 +0200
++++ gfs-2.03.07/gfs/gfs.h	2008-09-29 11:53:17.000000000 +0200
+@@ -3,7 +3,7 @@
+ 
+ #define RELEASE_VERSION "2.03.07"
+ 
+-#include <linux/lm_interface.h>
++#include "lm_interface.h"
+ 
+ #include "gfs_ondisk.h"
+ #include "fixed_div64.h"
+@@ -54,8 +53,8 @@
+ 
+ #define get_v2sdp(sb) ((struct gfs_sbd *)(sb)->s_fs_info)
+ #define set_v2sdp(sb, sdp) (sb)->s_fs_info = (sdp)
+-#define get_v2ip(inode) ((struct gfs_inode *)(inode)->i_private)
+-#define set_v2ip(inode, ip) (inode)->i_private = (ip)
++#define get_v2ip(inode) ((struct gfs_inode *)(inode)->u.generic_ip)
++#define set_v2ip(inode, ip) (inode)->u.generic_ip = (ip)
+ #define get_v2fp(file) ((struct gfs_file *)(file)->private_data)
+ #define set_v2fp(file, fp) (file)->private_data = (fp)
+ #define get_v2bd(bh) ((struct gfs_bufdata *)(bh)->b_private)
+diff -ur gfs/glock.c gfs/glock.c
+--- gfs-2.03.07/gfs/glock.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/glock.c	2008-09-29 11:50:22.000000000 +0200
+@@ -25,7 +25,7 @@
+ 
+ struct greedy {
+ 	struct gfs_holder gr_gh;
+-	struct delayed_work gr_work;
++	struct work_struct gr_work;
+ };
+ 
+ typedef void (*glock_examiner) (struct gfs_glock * gl, unsigned int *cnt);
+@@ -1605,6 +1605,9 @@
+ 	struct gfs_glock *gl = gh->gh_gl;
+ 	struct gfs_sbd *sdp = gl->gl_sbd;
+ 	struct gfs_glock_operations *glops = gl->gl_ops;
++	struct list_head *pos;
++	struct gfs_holder *tmp_gh = NULL;
++	int count = 0;
+ 
+ 	atomic_inc(&gl->gl_sbd->sd_glock_dq_calls);
+ 
+@@ -1615,13 +1618,14 @@
+ 		set_bit(GLF_SYNC, &gl->gl_flags);
+ 
+ 	/* Don't cache glock; request demote to unlock at inter-node scope */
+-	if (gh->gh_flags & GL_NOCACHE && gl->gl_holders.next == &gh->gh_list &&
+-	    gl->gl_holders.prev == &gh->gh_list)
+-		/* There's a race here.  If there are two holders, and both
+- 		 * are dq'ed at almost the same time, you can't guarantee that
+- 		 * you will call handle_callback. Fixing this will require
+- 		 * some refactoring */
+-		handle_callback(gl, LM_ST_UNLOCKED);
++	if (gh->gh_flags & GL_NOCACHE) {
++		list_for_each(pos, &gl->gl_holders) {
++			tmp_gh = list_entry(pos, struct gfs_holder, gh_list);
++			++count;
++		}
++		if (tmp_gh == gh && count == 1)
++			handle_callback(gl, LM_ST_UNLOCKED);
++	}
+ 
+ 	lock_on_glock(gl);
+ 
+@@ -1741,9 +1745,9 @@
+  */
+ 
+ static void
+-greedy_work(struct work_struct *work)
++greedy_work(void *data)
+ {
+-	struct greedy *gr = container_of(work, struct greedy, gr_work.work);
++	struct greedy *gr = (struct greedy *)data;
+ 	struct gfs_holder *gh = &gr->gr_gh;
+ 	struct gfs_glock *gl = gh->gh_gl;
+ 	struct gfs_glock_operations *glops = gl->gl_ops;
+@@ -1798,7 +1802,7 @@
+ 	gfs_holder_init(gl, 0, 0, gh);
+ 	set_bit(HIF_GREEDY, &gh->gh_iflags);
+ 	gh->gh_owner = NULL;
+-	INIT_DELAYED_WORK(&gr->gr_work, greedy_work);
++	INIT_WORK(&gr->gr_work, greedy_work, gr);
+ 
+ 	set_bit(GLF_SKIP_WAITERS2, &gl->gl_flags);
+ 	schedule_delayed_work(&gr->gr_work, time);
+diff -ur gfs/inode.c gfs/inode.c
+--- gfs-2.03.07/gfs/inode.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/inode.c	2008-09-29 11:29:39.000000000 +0200
+@@ -157,7 +157,6 @@
+ struct inode *
+ gfs_iget(struct gfs_inode *ip, int create)
+ {
+-	struct gfs_sbd *sdp = ip->i_sbd;
+ 	struct inode *inode = NULL, *tmp;
+ 
+ 	spin_lock(&ip->i_spin);
+@@ -177,19 +176,13 @@
+ 	/* Attach GFS-specific ops vectors */
+ 	if (ip->i_di.di_type == GFS_FILE_REG) {
+ 		tmp->i_op = &gfs_file_iops;
++		tmp->i_fop = &gfs_file_fops;
+ 		memcpy(&ip->gfs_file_aops, &gfs_file_aops,
+ 			   sizeof(struct address_space_operations));
+ 		tmp->i_mapping->a_ops = &ip->gfs_file_aops;
+-		if (sdp->sd_args.ar_localflocks)
+-			tmp->i_fop = &gfs_file_fops_nolock;
+-		else
+-			tmp->i_fop = &gfs_file_fops;
+ 	} else if (ip->i_di.di_type == GFS_FILE_DIR) {
+ 		tmp->i_op = &gfs_dir_iops;
+-		if (sdp->sd_args.ar_localflocks)
+-			tmp->i_fop = &gfs_dir_fops_nolock;
+-		else
+-			tmp->i_fop = &gfs_dir_fops;
++		tmp->i_fop = &gfs_dir_fops;
+ 	} else if (ip->i_di.di_type == GFS_FILE_LNK) {
+ 		tmp->i_op = &gfs_symlink_iops;
+ 	} else {
+diff -ur gfs/ioctl.c gfs/ioctl.c
+--- gfs-2.03.07/gfs/ioctl.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/ioctl.c	2008-09-29 11:29:39.000000000 +0200
+@@ -1478,7 +1478,7 @@
+ 	else if (strcmp(arg0, "get_file_meta") == 0)
+ 		error = gi_get_file_meta(ip, gi);
+ 	else if (strcmp(arg0, "get_file_meta_quota") == 0)
+-		error = gi_get_file_meta(ip->i_sbd->sd_qinode, gi);
++		error = gi_get_file_meta(ip->i_sbd->sd_qinode, &gi);
+ 	else if (strcmp(arg0, "do_file_flush") == 0)
+ 		error = gi_do_file_flush(ip, gi);
+ 	else if (strcmp(arg0, "get_hfile_stat") == 0)
+diff -ur gfs/lm.c gfs/lm.c
+--- gfs-2.03.07/gfs/lm.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/lm.c	2008-09-29 11:50:22.000000000 +0200
+@@ -7,6 +7,7 @@
+ 
+ #include "gfs_ondisk.h"
+ #include "gfs.h"
++#include "lm_interface.h"
+ #include "incore.h"
+ #include "glock.h"
+ #include "lm.h"
+diff -ur gfs/main.c gfs/main.c
+--- gfs-2.03.07/gfs/main.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/main.c	2008-09-29 11:29:39.000000000 +0200
+@@ -8,7 +8,6 @@
+ #include <linux/proc_fs.h>
+ #include <linux/module.h>
+ #include <linux/init.h>
+-#include <linux/time.h>
+ 
+ #include "gfs.h"
+ #include "ops_fstype.h"
+@@ -24,7 +23,6 @@
+ int __init init_gfs_fs(void)
+ {
+ 	int error;
+-	struct timespec tv;
+ 
+ /*	gfs2_init_lmh(); gfs2 should do this for us*/
+ 
+@@ -35,12 +33,11 @@
+ 	if (error)
+ 		goto fail;
+ 
+-	getnstimeofday(&tv);
+-	gfs_random_number = tv.tv_nsec;
++	gfs_random_number = xtime.tv_nsec;
+ 
+ 	gfs_glock_cachep = kmem_cache_create("gfs_glock", sizeof(struct gfs_glock),
+ 					     0, 0,
+-					     NULL);
++					     NULL, NULL);
+ 	gfs_inode_cachep = NULL;
+ 	gfs_bufdata_cachep = NULL;
+ 	gfs_mhc_cachep = NULL;
+@@ -50,19 +47,19 @@
+ 
+ 	gfs_inode_cachep = kmem_cache_create("gfs_inode", sizeof(struct gfs_inode),
+ 					     0, 0,
+-					     NULL);
++					     NULL, NULL);
+ 	if (!gfs_inode_cachep)
+ 		goto fail1;
+ 
+ 	gfs_bufdata_cachep = kmem_cache_create("gfs_bufdata", sizeof(struct gfs_bufdata),
+ 					       0, 0,
+-					       NULL);
++					       NULL, NULL);
+ 	if (!gfs_bufdata_cachep)
+ 		goto fail1;
+ 
+ 	gfs_mhc_cachep = kmem_cache_create("gfs_meta_header_cache", sizeof(struct gfs_meta_header_cache),
+ 					   0, 0,
+-					   NULL);
++					   NULL, NULL);
+ 	if (!gfs_mhc_cachep)
+ 		goto fail;
+ 
+diff -ur gfs/ops_address.c gfs/ops_address.c
+--- gfs-2.03.07/gfs/ops_address.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/ops_address.c	2008-09-29 11:29:39.000000000 +0200
+@@ -459,7 +459,7 @@
+  * Returns: errno
+  */
+ 
+-static ssize_t
++static int
+ gfs_direct_IO(int rw, struct kiocb *iocb, const struct iovec *iov,
+ 	      loff_t offset, unsigned long nr_segs)
+ {
+diff -ur gfs/ops_export.c gfs/ops_export.c
+--- gfs-2.03.07/gfs/ops_export.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/ops_export.c	2008-09-29 11:29:39.000000000 +0200
+@@ -5,7 +5,6 @@
+ #include <asm/semaphore.h>
+ #include <linux/completion.h>
+ #include <linux/buffer_head.h>
+-#include <linux/exportfs.h>
+ 
+ #include "gfs.h"
+ #include "dio.h"
+@@ -31,6 +30,49 @@
+ };
+ 
+ /**
++ * gfs_decode_fh -
++ * @param1: description
++ * @param2: description
++ * @param3: description
++ *
++ * Function description
++ *
++ * Returns: what is returned
++ */
++
++struct dentry *
++gfs_decode_fh(struct super_block *sb, __u32 *fh, int fh_len, int fh_type,
++	      int (*acceptable)(void *context, struct dentry *dentry),
++	      void *context)
++{
++	struct inode_cookie this, parent;
++
++	atomic_inc(&get_v2sdp(sb)->sd_ops_export);
++
++	memset(&parent, 0, sizeof(struct inode_cookie));
++
++	switch (fh_type) {
++	case 6:
++		parent.gen_valid = TRUE;
++		parent.gen = gfs32_to_cpu(fh[5]);
++	case 5:
++		parent.formal_ino = ((uint64_t)gfs32_to_cpu(fh[3])) << 32;
++		parent.formal_ino |= (uint64_t)gfs32_to_cpu(fh[4]);
++	case 3:
++		this.gen_valid = TRUE;
++		this.gen = gfs32_to_cpu(fh[2]);
++		this.formal_ino = ((uint64_t)gfs32_to_cpu(fh[0])) << 32;
++		this.formal_ino |= (uint64_t)gfs32_to_cpu(fh[1]);
++		break;
++	default:
++		return NULL;
++	}
++
++	return gfs_export_ops.find_exported_dentry(sb, &this, &parent,
++						   acceptable, context);
++}
++
++/**
+  * gfs_encode_fh -
+  * @param1: description
+  * @param2: description
+@@ -199,12 +241,12 @@
+ 
+ 	ip = get_gl2ip(i_gh.gh_gl);
+ 
+-	inode = gfs_iget(ip, CREATE);
+-	gfs_inode_put(ip);
+-
+ 	gfs_glock_dq_uninit(&d_gh);
+ 	gfs_glock_dq_uninit(&i_gh);
+ 
++	inode = gfs_iget(ip, CREATE);
++	gfs_inode_put(ip);
++
+ 	if (!inode)
+ 		return ERR_PTR(-ENOMEM);
+ 
+@@ -234,9 +276,10 @@
+  */
+ 
+ struct dentry *
+-gfs_get_dentry(struct super_block *sb, struct inode_cookie *cookie)
++gfs_get_dentry(struct super_block *sb, void *inump)
+ {
+ 	struct gfs_sbd *sdp = get_v2sdp(sb);
++	struct inode_cookie *cookie = (struct inode_cookie *)inump;
+ 	struct gfs_inum inum;
+ 	struct gfs_holder i_gh, ri_gh, rgd_gh;
+ 	struct gfs_rgrpd *rgd;
+@@ -349,55 +392,11 @@
+ 	return ERR_PTR(error);
+ }
+ 
+-static struct dentry *gfs_fh_to_dentry(struct super_block *sb, struct fid *fid,
+-		int fh_len, int fh_type)
+-{
+-	struct inode_cookie this;
+-	__u32 *fh = fid->raw;
+-
+-	atomic_inc(&get_v2sdp(sb)->sd_ops_export);
+-
+-	switch (fh_type) {
+-	case 6:
+-	case 5:
+-	case 3:
+-		this.gen_valid = TRUE;
+-		this.gen = gfs32_to_cpu(fh[2]);
+-		this.formal_ino = ((uint64_t)gfs32_to_cpu(fh[0])) << 32;
+-		this.formal_ino |= (uint64_t)gfs32_to_cpu(fh[1]);
+-		return gfs_get_dentry(sb, &this);
+-	default:
+-		return NULL;
+-	}
+-}
+-
+-static struct dentry *gfs_fh_to_parent(struct super_block *sb, struct fid *fid,
+-		int fh_len, int fh_type)
+-{
+-	struct inode_cookie parent;
+-	__u32 *fh = fid->raw;
+-
+-	atomic_inc(&get_v2sdp(sb)->sd_ops_export);
+-
+-	switch (fh_type) {
+-	case 6:
+-		parent.gen_valid = TRUE;
+-		parent.gen = gfs32_to_cpu(fh[5]);
+-	case 5:
+-		parent.formal_ino = ((uint64_t)gfs32_to_cpu(fh[3])) << 32;
+-		parent.formal_ino |= (uint64_t)gfs32_to_cpu(fh[4]);
+-	default:
+-		return NULL;
+-	}
+-
+-	return gfs_get_dentry(sb, &parent);
+-}
+-
+-const struct export_operations gfs_export_ops = {
++struct export_operations gfs_export_ops = {
++	.decode_fh = gfs_decode_fh,
+ 	.encode_fh = gfs_encode_fh,
+-	.fh_to_dentry = gfs_fh_to_dentry,
+-	.fh_to_parent = gfs_fh_to_parent,
+ 	.get_name = gfs_get_name,
+ 	.get_parent = gfs_get_parent,
++	.get_dentry = gfs_get_dentry,
+ };
+ 
+diff -ur gfs/ops_export.h gfs/ops_export.h
+--- gfs-2.03.07/gfs/ops_export.h	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/ops_export.h	2008-09-29 11:29:39.000000000 +0200
+@@ -1,6 +1,6 @@
+ #ifndef __OPS_EXPORT_DOT_H__
+ #define __OPS_EXPORT_DOT_H__
+ 
+-extern const struct export_operations gfs_export_ops;
++extern struct export_operations gfs_export_ops;
+ 
+ #endif /* __OPS_EXPORT_DOT_H__ */
+diff -ur gfs/ops_file.c gfs/ops_file.c
+--- gfs-2.03.07/gfs/ops_file.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/ops_file.c	2008-09-29 11:29:39.000000000 +0200
+@@ -321,17 +321,15 @@
+ 			goto out_gunlock;
+ 
+ 		count = do_read_readi(file, buf, size & ~mask, offset, iocb);
+-        }
+-        else {
+-                if (!iocb) 
+-                        count = do_sync_read(file, buf, size, offset);
+-                else {
+-                        struct iovec local_iov = { .iov_base = buf, .iov_len = size};
+-
+-                        count = generic_file_aio_read(iocb, &local_iov, 1, *offset);
+-                        iocb->ki_pos = *offset;
+-                }
+-        }
++	}
++	else {
++		if (!iocb) 
++			count = generic_file_read(file, buf, size, offset);
++		else {
++		        struct iovec local_iov = { .iov_base = buf, .iov_len = size};
++			count = __generic_file_aio_read(iocb, &local_iov, 1, offset);
++		}
++	}
+ 
+ 	error = 0;
+ 
+@@ -375,17 +373,22 @@
+ 
+ 	if (gfs_is_jdata(ip) ||
+ 	    (gfs_is_stuffed(ip) && !test_bit(GIF_PAGED, &ip->i_flags)))
+-                count = do_read_readi(file, buf, size, offset, iocb);
+-        else {
+-                if (!iocb) {
+-                        count = do_sync_read(file, buf, size, offset);
+-                } else {
+-                        struct iovec local_iov = { .iov_base = buf, .iov_len = size};
++		count = do_read_readi(file, buf, size, offset, iocb);
++	else {
++		if (!iocb) {
++			count = generic_file_read(file, buf, size, offset);
++		} else {
++			struct iovec local_iov = {
++				.iov_base = (char __user *)buf,
++				.iov_len = size 
++			};
+ 
+-                        count = generic_file_aio_read(iocb, &local_iov, 1, *offset);
+-                        iocb->ki_pos = *offset;
+-                }
+-        }
++		        count = __generic_file_aio_read(iocb, 
++					&local_iov, 1, offset);
++			if (count == -EIOCBQUEUED)
++				count = wait_on_sync_kiocb(iocb);
++		}
++	}
+ 
+ 	gfs_glock_dq_m(num_gh + 1, ghs);
+ 
+@@ -426,16 +429,15 @@
+ 
+ /*
+  * gfs_aio_read: match with vfs generic_file_aio_read as:
+- *	(struct kiocb *iocb, char __user *buf, size_t count, loff_t pos)
++ * 	(struct kiocb *iocb, char __user *buf, size_t count, loff_t pos)
+  */
+ static ssize_t
+-gfs_aio_read(struct kiocb *iocb, const struct iovec *iov, unsigned long count,
+-		loff_t pos)
++gfs_aio_read(struct kiocb *iocb, char __user *buf, size_t count, loff_t pos)
+ {
+ 	struct file *filp = iocb->ki_filp;
+ 
+ 	BUG_ON(iocb->ki_pos != pos);
+-	return(__gfs_read(filp, iov->iov_base, iov->iov_len, &iocb->ki_pos, iocb));
++	return(__gfs_read(filp, buf, count, &iocb->ki_pos, iocb));
+ }
+ 
+ /**
+@@ -470,41 +472,6 @@
+ }
+ 
+ /**
+- * gfs_file_aio_write_nolock - Call vfs aio layer to write bytes to a file
+- * @file: The file to write to
+- * @buf: The buffer to copy from
+- * @size: The amount of data requested
+- * @offset: The offset in the file to write
+- * @iocb: The io control block.  If NULL, a temporary one will be used.
+- *
+- * Returns: The number of bytes written, errno on failure
+- */
+-static ssize_t
+-gfs_file_aio_write_nolock(struct file *file, char *buf, size_t size,
+-                                                  loff_t *offset, struct kiocb *iocb)
+-{
+-        struct iovec local_iov = { .iov_base = buf, .iov_len = size };
+-        struct kiocb local_iocb, *kiocb = NULL;
+-        ssize_t count;
+-
+-        if (!iocb) {
+-                init_sync_kiocb(&local_iocb, file);
+-                local_iocb.ki_nr_segs = 1;
+-                kiocb = &local_iocb;
+-        }
+-        else
+-                kiocb = iocb;
+-        
+-        kiocb->ki_pos = *offset;
+-        count = generic_file_aio_write_nolock(kiocb, &local_iov, kiocb->ki_nr_segs,
+-                                                                                  kiocb->ki_pos);
+-        *offset = kiocb->ki_pos;
+-        if (kiocb == &local_iocb && count == -EIOCBQUEUED)
+-                count = wait_on_sync_kiocb(kiocb);
+-        return count;
+-}
+-
+-/**
+  * do_write_direct_alloc - Write bytes to a file
+  * @file: The file to write to
+  * @buf: The buffer to copy from
+@@ -524,6 +491,7 @@
+ 	struct gfs_inode *ip = get_v2ip(inode);
+ 	struct gfs_sbd *sdp = ip->i_sbd;
+ 	struct gfs_alloc *al = NULL;
++	struct iovec local_iov = { .iov_base = buf, .iov_len = size };
+ 	struct buffer_head *dibh;
+ 	unsigned int data_blocks, ind_blocks;
+ 	ssize_t count;
+@@ -574,7 +542,11 @@
+ 			goto fail_end_trans;
+ 	}
+ 
+-	count = gfs_file_aio_write_nolock(file, buf, size, offset, iocb);
++	if (!iocb)
++		count = generic_file_write_nolock(file, &local_iov, 1, offset);
++	else {
++		count = generic_file_aio_write_nolock(iocb, &local_iov, 1, offset);
++	}
+ 	if (count < 0) {
+ 		error = count;
+ 		goto fail_end_trans;
+@@ -738,6 +710,7 @@
+ 			count += error;
+ 		}
+ 	} else {
++		struct iovec local_iov = { .iov_base = buf, .iov_len = size };
+ 		struct gfs_holder t_gh;
+ 
+ 		clear_bit(GFF_DID_DIRECT_ALLOC, &fp->f_flags);
+@@ -749,7 +722,13 @@
+ 		/* Todo: It would be nice if init_sync_kiocb is exported.
+ 		 *  .. wcheng
+ 		 */
+-		count = gfs_file_aio_write_nolock(file, buf, size, offset, iocb);
++		if (!iocb) 
++			count = 
++			generic_file_write_nolock(file, &local_iov, 1, offset);
++		else {
++			count = 
++			generic_file_aio_write_nolock(iocb, &local_iov, 1, offset);
++		}
+ 		gfs_glock_dq_uninit(&t_gh);
+ 	}
+ 
+@@ -872,7 +851,16 @@
+ 		}
+ 		*offset += count;
+ 	} else {
+-		count = gfs_file_aio_write_nolock(file, buf, size, offset, iocb);
++		struct iovec local_iov = { .iov_base = buf, .iov_len = size };
++
++		if (!iocb) {
++			count = generic_file_write_nolock(file, &local_iov, 1, offset);
++		} else {
++			count = generic_file_aio_write_nolock(iocb, 
++				&local_iov, 1, offset);
++			if (count == -EIOCBQUEUED)
++				count = wait_on_sync_kiocb(iocb);
++		}
+ 		if (count < 0) {
+ 			error = count;
+ 			goto fail_end_trans;
+@@ -1048,15 +1036,13 @@
+ }
+ 
+ static ssize_t
+-gfs_aio_write(struct kiocb *iocb, const struct iovec *iov, unsigned long segs,
+-			loff_t pos)
++gfs_aio_write(struct kiocb *iocb, const char __user *buf, size_t size, loff_t pos)
+ {
+ 	struct file *file = iocb->ki_filp;
+ 
+ 	BUG_ON(iocb->ki_pos != pos);
+ 
+-	return(__gfs_write(file, iov->iov_base, iov->iov_len, &iocb->ki_pos,
+-					iocb));
++	return(__gfs_write(file, buf, size, &iocb->ki_pos, iocb));
+ }
+ 
+ /**
+@@ -1358,7 +1344,7 @@
+ 
+ 	default:
+ 		return -ENOTTY;
+-	}
++        }
+ }
+ 
+ #ifdef CONFIG_COMPAT
+@@ -1375,24 +1361,24 @@
+ static long
+ gfs_compat_ioctl(struct file *file, unsigned cmd, unsigned long arg)
+ {
+-	struct gfs_inode *ip = get_v2ip(file->f_mapping->host);
++        struct gfs_inode *ip = get_v2ip(file->f_mapping->host);
+ 
+-	atomic_inc(&ip->i_sbd->sd_ops_file);
++        atomic_inc(&ip->i_sbd->sd_ops_file);
+ 
+-	switch (cmd) {
+-	case GFS_IOCTL_IDENTIFY: {
++        switch (cmd) {
++        case GFS_IOCTL_IDENTIFY: {
+                 unsigned int x = GFS_MAGIC;
+                 if (copy_to_user((unsigned int *)arg, &x, sizeof(unsigned int)))
+                         return -EFAULT;
+-		return 0;
++                return 0;
+         }
+ 
+-	case GFS_IOCTL_SUPER:
+-		return gfs_ioctl_i_compat(ip, arg);
++        case GFS_IOCTL_SUPER:
++                return gfs_ioctl_i_compat(ip, arg);
+ 
+-	default:
+-		return -ENOTTY;
+-	}
++        default:
++                return -ENOTTY;
++        }
+ }
+ #endif
+ 
+@@ -1600,23 +1586,38 @@
+ 
+ 	if (!(fl->fl_flags & FL_POSIX))
+ 		return -ENOLCK;
+-	if ((ip->i_di.di_mode & (S_ISGID | S_IXGRP)) == S_ISGID)
+-		return -ENOLCK;
++        if ((ip->i_di.di_mode & (S_ISGID | S_IXGRP)) == S_ISGID)
++                return -ENOLCK;
+ 
+-	if (IS_GETLK(cmd))
+-		return gfs_lm_plock_get(sdp, &name, file, fl);
+-	else if (fl->fl_type == F_UNLCK)
++        if (sdp->sd_args.ar_localflocks) {
++                if (IS_GETLK(cmd)) {
++                        int conflict;
++                        struct file_lock tmp;
++
++                        conflict = posix_test_lock(file, fl, &tmp);
++                        fl->fl_type = F_UNLCK;
++                        if (conflict)
++                                memcpy(fl, &tmp, sizeof(struct file_lock));
++                        return 0;
++                } else {
++                        return posix_lock_file_wait(file, fl);
++                }
++        }
++
++        if (IS_GETLK(cmd))
++                return gfs_lm_plock_get(sdp, &name, file, fl);
++        else if (fl->fl_type == F_UNLCK)
+ 		return gfs_lm_punlock(sdp, &name, file, fl);
+ 	else
+ 		return gfs_lm_plock(sdp, &name, file, cmd, fl);
+ }
+ 
+ /**
+- * gfs_splice_read - Send bytes to a file or socket
++ * gfs_sendfile - Send bytes to a file or socket
+  * @in_file: The file to read from
+  * @out_file: The file to write to
+  * @count: The amount of data
+- * @ppos: The beginning file offset
++ * @offset: The beginning file offset
+  *
+  * Outputs: offset - updated according to number of bytes read
+  *
+@@ -1624,7 +1625,7 @@
+  */
+ 
+ static ssize_t
+-gfs_splice_read(struct file *in_file, loff_t *ppos, struct pipe_inode_info *pipe, size_t count, unsigned int flags)
++gfs_sendfile(struct file *in_file, loff_t *offset, size_t count, read_actor_t actor, void __user *target)
+ {
+ 	struct gfs_inode *ip = get_v2ip(in_file->f_mapping->host);
+ 	struct gfs_holder gh;
+@@ -1641,7 +1642,7 @@
+ 	if (gfs_is_jdata(ip))
+ 		retval = -ENOSYS;
+ 	else 
+-		retval = generic_file_splice_read(in_file, ppos, pipe, count, flags);
++		retval = generic_file_sendfile(in_file, offset, count, actor, target);
+ 
+ 	gfs_glock_dq(&gh);
+ 
+@@ -1743,18 +1744,22 @@
+ static int
+ gfs_flock(struct file *file, int cmd, struct file_lock *fl)
+ {
+-	struct gfs_inode *ip = get_v2ip(file->f_mapping->host);
++        struct gfs_inode *ip = get_v2ip(file->f_mapping->host);
++        struct gfs_sbd *sdp = ip->i_sbd;
+ 
+-	atomic_inc(&ip->i_sbd->sd_ops_file);
++        atomic_inc(&ip->i_sbd->sd_ops_file);
+ 
+ 	if (!(fl->fl_flags & FL_FLOCK))
+ 		return -ENOLCK;
+-	if ((ip->i_di.di_mode & (S_ISGID | S_IXGRP)) == S_ISGID)
+-		return -ENOLCK;
++        if ((ip->i_di.di_mode & (S_ISGID | S_IXGRP)) == S_ISGID)
++                return -ENOLCK;
+ 
+-	if (fl->fl_type == F_UNLCK) {
+-		do_unflock(file, fl);
+-		return 0;
++        if (sdp->sd_args.ar_localflocks)
++                return flock_lock_file_wait(file, fl);
++
++        if (fl->fl_type == F_UNLCK) {
++                do_unflock(file, fl);
++                return 0;
+ 	} else
+ 		return do_flock(file, cmd, fl);
+ }
+@@ -1763,58 +1768,30 @@
+ 	.llseek = gfs_llseek,
+ 	.read = gfs_read,
+ 	.write = gfs_write,
+-	.aio_read = gfs_aio_read,
+-	.aio_write = gfs_aio_write,
+-	.ioctl = gfs_ioctl,
++        .aio_read = gfs_aio_read,
++        .aio_write = gfs_aio_write,
++        .ioctl = gfs_ioctl,
+ #ifdef CONFIG_COMPAT
+-	.compat_ioctl   = gfs_compat_ioctl,
++        .compat_ioctl   = gfs_compat_ioctl,
+ #endif
+-	.mmap = gfs_mmap,
+-	.open = gfs_open,
+-	.release = gfs_close,
++        .mmap = gfs_mmap,
++        .open = gfs_open,
++        .release = gfs_close,
+ 	.fsync = gfs_fsync,
+ 	.lock = gfs_lock,
+-	.splice_read = gfs_splice_read,
++	.sendfile = gfs_sendfile,
+ 	.flock = gfs_flock,
+ };
+ 
+ struct file_operations gfs_dir_fops = {
+-	.readdir = gfs_readdir,
+-	.ioctl = gfs_ioctl,
+-#ifdef CONFIG_COMPAT
+-	.compat_ioctl   = gfs_compat_ioctl,
+-#endif
+-	.open = gfs_open,
+-	.release = gfs_close,
+-	.fsync = gfs_fsync,
+-	.lock = gfs_lock,
+-	.flock = gfs_flock,
+-};
+-
+-struct file_operations gfs_file_fops_nolock = {
+-	.llseek = gfs_llseek,
+-	.read = gfs_read,
+-	.write = gfs_write,
+-	.aio_read = gfs_aio_read,
+-	.aio_write = gfs_aio_write,
+-	.ioctl = gfs_ioctl,
++        .readdir = gfs_readdir,
++        .ioctl = gfs_ioctl,
+ #ifdef CONFIG_COMPAT
+-	.compat_ioctl = gfs_compat_ioctl,
++        .compat_ioctl   = gfs_compat_ioctl,
+ #endif
+-	.mmap = gfs_mmap,
+-	.open = gfs_open,
+-	.release = gfs_close,
+-	.fsync = gfs_fsync,
+-	.splice_read = gfs_splice_read,
+-};
+-
+-struct file_operations gfs_dir_fops_nolock = {
+-	.readdir = gfs_readdir,
+-	.ioctl = gfs_ioctl,
+-#ifdef CONFIG_COMPAT
+-	.compat_ioctl = gfs_compat_ioctl,
+-#endif
+-	.open = gfs_open,
+-	.release = gfs_close,
+-	.fsync = gfs_fsync,
++        .open = gfs_open,
++        .release = gfs_close,
++        .fsync = gfs_fsync,
++        .lock = gfs_lock,
++        .flock = gfs_flock,
+ };
+diff -ur gfs/ops_file.h gfs/ops_file.h
+--- gfs-2.03.07/gfs/ops_file.h	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/ops_file.h	2008-09-29 11:29:39.000000000 +0200
+@@ -3,7 +3,5 @@
+ 
+ extern struct file_operations gfs_file_fops;
+ extern struct file_operations gfs_dir_fops;
+-extern struct file_operations gfs_file_fops_nolock;
+-extern struct file_operations gfs_dir_fops_nolock;
+ 
+ #endif /* __OPS_FILE_DOT_H__ */
+diff -ur gfs/ops_inode.c gfs/ops_inode.c
+--- gfs-2.03.07/gfs/ops_inode.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/ops_inode.c	2008-09-29 11:29:39.000000000 +0200
+@@ -177,17 +177,17 @@
+ 	parent = dget_parent(dentry);
+ 
+ 	if (gfs_filecmp(&dentry->d_name, "@hostname", 9))
+-		new = lookup_one_len(init_utsname()->nodename,
++		new = lookup_one_len(system_utsname.nodename,
+ 				     parent,
+-				     strlen(init_utsname()->nodename));
++				     strlen(system_utsname.nodename));
+ 	else if (gfs_filecmp(&dentry->d_name, "@mach", 5))
+-		new = lookup_one_len(init_utsname()->machine,
++		new = lookup_one_len(system_utsname.machine,
+ 				     parent,
+-				     strlen(init_utsname()->machine));
++				     strlen(system_utsname.machine));
+ 	else if (gfs_filecmp(&dentry->d_name, "@os", 3))
+-		new = lookup_one_len(init_utsname()->sysname,
++		new = lookup_one_len(system_utsname.sysname,
+ 				     parent,
+-				     strlen(init_utsname()->sysname));
++				     strlen(system_utsname.sysname));
+ 	else if (gfs_filecmp(&dentry->d_name, "@uid", 4))
+ 		new = lookup_one_len(buf,
+ 				     parent,
+@@ -200,8 +200,8 @@
+ 		new = lookup_one_len(buf,
+ 				     parent,
+ 				     sprintf(buf, "%s_%s",
+-					     init_utsname()->machine,
+-					     init_utsname()->sysname));
++					     system_utsname.machine,
++					     system_utsname.sysname));
+ 	else if (gfs_filecmp(&dentry->d_name, "@jid", 4))
+ 		new = lookup_one_len(buf,
+ 				     parent,
+@@ -236,17 +236,17 @@
+ 	parent = dget_parent(dentry);
+ 
+ 	if (gfs_filecmp(&dentry->d_name, "{hostname}", 10))
+-		new = lookup_one_len(init_utsname()->nodename,
++		new = lookup_one_len(system_utsname.nodename,
+ 				     parent,
+-				     strlen(init_utsname()->nodename));
++				     strlen(system_utsname.nodename));
+ 	else if (gfs_filecmp(&dentry->d_name, "{mach}", 6))
+-		new = lookup_one_len(init_utsname()->machine,
++		new = lookup_one_len(system_utsname.machine,
+ 				     parent,
+-				     strlen(init_utsname()->machine));
++				     strlen(system_utsname.machine));
+ 	else if (gfs_filecmp(&dentry->d_name, "{os}", 4))
+-		new = lookup_one_len(init_utsname()->sysname,
++		new = lookup_one_len(system_utsname.sysname,
+ 				     parent,
+-				     strlen(init_utsname()->sysname));
++				     strlen(system_utsname.sysname));
+ 	else if (gfs_filecmp(&dentry->d_name, "{uid}", 5))
+ 		new = lookup_one_len(buf,
+ 				     parent,
+@@ -259,8 +259,8 @@
+ 		new = lookup_one_len(buf,
+ 				     parent,
+ 				     sprintf(buf, "%s_%s",
+-					     init_utsname()->machine,
+-					     init_utsname()->sysname));
++					     system_utsname.machine,
++					     system_utsname.sysname));
+ 	else if (gfs_filecmp(&dentry->d_name, "{jid}", 5))
+ 		new = lookup_one_len(buf,
+ 				     parent,
+diff -ur gfs/ops_vm.c gfs/ops_vm.c
+--- gfs-2.03.07/gfs/ops_vm.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/ops_vm.c	2008-09-29 11:29:39.000000000 +0200
+@@ -39,7 +39,7 @@
+ }
+ 
+ /**
+- * gfs_private_fault -
++ * gfs_private_nopage -
+  * @area:
+  * @address:
+  * @type:
+@@ -47,29 +47,31 @@
+  * Returns: the page
+  */
+ 
+-static int gfs_private_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
++static struct page *
++gfs_private_nopage(struct vm_area_struct *area,
++		   unsigned long address, int *type)
+ {
+-	struct gfs_inode *ip = get_v2ip(vma->vm_file->f_mapping->host);
++	struct gfs_inode *ip = get_v2ip(area->vm_file->f_mapping->host);
+ 	struct gfs_holder i_gh;
++	struct page *result;
+ 	int error;
+-	int ret = 0;
+ 
+ 	atomic_inc(&ip->i_sbd->sd_ops_vm);
+ 
+ 	error = gfs_glock_nq_init(ip->i_gl, LM_ST_SHARED, 0, &i_gh);
+ 	if (error)
+-		goto out;
++		return NULL;
+ 
+ 	set_bit(GIF_PAGED, &ip->i_flags);
+ 
+-	ret = filemap_fault(vma, vmf);
++	result = filemap_nopage(area, address, type);
+ 
+-	if (ret && ret != VM_FAULT_OOM)
++	if (result && result != NOPAGE_OOM)
+ 		pfault_be_greedy(ip);
+ 
+ 	gfs_glock_dq_uninit(&i_gh);
+- out:
+-	return ret;
++
++	return result;
+ }
+ 
+ /**
+@@ -81,10 +83,9 @@
+  */
+ 
+ static int
+-alloc_page_backing(struct gfs_inode *ip, struct page *page)
++alloc_page_backing(struct gfs_inode *ip, unsigned long index)
+ {
+ 	struct gfs_sbd *sdp = ip->i_sbd;
+-	unsigned long index = page->index;
+ 	uint64_t lblock = index << (PAGE_CACHE_SHIFT - sdp->sd_sb.sb_bsize_shift);
+ 	unsigned int blocks = PAGE_CACHE_SIZE >> sdp->sd_sb.sb_bsize_shift;
+ 	struct gfs_alloc *al;
+@@ -155,7 +156,7 @@
+ }
+ 
+ /**
+- * gfs_sharewrite_fault -
++ * gfs_sharewrite_nopage -
+  * @area:
+  * @address:
+  * @type:
+@@ -163,71 +164,61 @@
+  * Returns: the page
+  */
+ 
+-static int gfs_sharewrite_fault(struct vm_area_struct *vma,
+-				struct vm_fault *vmf)
++static struct page *
++gfs_sharewrite_nopage(struct vm_area_struct *area,
++		      unsigned long address, int *type)
+ {
+-	struct file *file = vma->vm_file;
+-	struct gfs_inode *ip = get_v2ip(file->f_mapping->host);
++	struct gfs_inode *ip = get_v2ip(area->vm_file->f_mapping->host);
+ 	struct gfs_holder i_gh;
++	struct page *result = NULL;
++	unsigned long index = ((address - area->vm_start) >> PAGE_CACHE_SHIFT) + area->vm_pgoff;
+ 	int alloc_required;
+ 	int error;
+-	int ret = 0;
+ 
+ 	atomic_inc(&ip->i_sbd->sd_ops_vm);
+ 
+ 	error = gfs_glock_nq_init(ip->i_gl, LM_ST_EXCLUSIVE, 0, &i_gh);
+ 	if (error)
+-		goto out;
++		return NULL;
+ 
+ 	if (gfs_is_jdata(ip))
+-		goto out_unlock;
++		goto out;
+ 
+ 	set_bit(GIF_PAGED, &ip->i_flags);
+ 	set_bit(GIF_SW_PAGED, &ip->i_flags);
+ 
+-	error = gfs_write_alloc_required(ip,
+-					 (u64)vmf->pgoff << PAGE_CACHE_SHIFT,
++	error = gfs_write_alloc_required(ip, (uint64_t)index << PAGE_CACHE_SHIFT,
+ 					 PAGE_CACHE_SIZE, &alloc_required);
+-	if (error) {
+-		ret = VM_FAULT_OOM; /* XXX: are these right? */
+-		goto out_unlock;
+-	}
++	if (error)
++		goto out;
+ 
+-	ret = filemap_fault(vma, vmf);
+-	if (ret & VM_FAULT_ERROR)
+-		goto out_unlock;
++	result = filemap_nopage(area, address, type);
++	if (!result || result == NOPAGE_OOM)
++		goto out;
+ 
+ 	if (alloc_required) {
+-		/* XXX: do we need to drop page lock around alloc_page_backing?*/
+-		error = alloc_page_backing(ip, vmf->page);
++		error = alloc_page_backing(ip, index);
+ 		if (error) {
+-                        /*
+-                         * VM_FAULT_LOCKED should always be the case for
+-                         * filemap_fault, but it may not be in a future
+-                         * implementation.
+-                         */
+-			if (ret & VM_FAULT_LOCKED)
+-				unlock_page(vmf->page);
+-			page_cache_release(vmf->page);
+-			ret = VM_FAULT_OOM;
+-			goto out_unlock;
++			page_cache_release(result);
++			result = NULL;
++			goto out;
+ 		}
+-		set_page_dirty(vmf->page);
++		set_page_dirty(result);
+ 	}
+ 
+ 	pfault_be_greedy(ip);
+ 
+- out_unlock:
+-	gfs_glock_dq_uninit(&i_gh);
+  out:
+-	return ret;
++	gfs_glock_dq_uninit(&i_gh);
++
++	return result;
+ }
+ 
+ struct vm_operations_struct gfs_vm_ops_private = {
+-	.fault = gfs_private_fault,
++	.nopage = gfs_private_nopage,
+ };
+ 
+ struct vm_operations_struct gfs_vm_ops_sharewrite = {
+-	.fault = gfs_sharewrite_fault,
++	.nopage = gfs_sharewrite_nopage,
+ };
+ 
+diff -ur gfs/quota.c gfs/quota.c
+--- gfs-2.03.07/gfs/quota.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/quota.c	2008-09-29 12:01:50.000000000 +0200
+@@ -947,8 +947,8 @@
+ 
+ 	if (current->signal) {
+ 		tty = current->signal->tty;
+-		if (tty && tty->ops->write)
+-			tty->ops->write(tty, line, len);
++		if (tty && tty->driver->write)
++			tty->driver->write(tty, line, len);
+ 	}
+ 
+ 	kfree(line);
+diff -ur gfs/recovery.c gfs/recovery.c
+--- gfs-2.03.07/gfs/recovery.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/recovery.c	2008-09-29 11:29:39.000000000 +0200
+@@ -538,7 +538,7 @@
+ }
+ 
+ /**
+- * gfs_recover_journal - recover a given journal
++ * gfs_recover_journal - recovery a given journal
+  * @sdp: the filesystem
+  * @jid: the number of the journal to recover
+  * @jdesc: the struct gfs_jindex describing the journal
+@@ -563,7 +563,7 @@
+ 	printk("GFS: fsid=%s: jid=%u: Trying to acquire journal lock...\n",
+ 	       sdp->sd_fsname, jid);
+ 
+-	/*  Acquire the journal lock so we can do recovery  */
++	/*  Aquire the journal lock so we can do recovery  */
+ 
+ 	error = gfs_glock_nq_num(sdp,
+ 				 jdesc->ji_addr, &gfs_meta_glops,
+diff -ur gfs/rgrp.c gfs/rgrp.c
+--- gfs-2.03.07/gfs/rgrp.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/rgrp.c	2008-09-29 11:29:39.000000000 +0200
+@@ -653,7 +653,6 @@
+ 	rgd->rd_bh = kmalloc(length * sizeof(struct buffer_head *), GFP_KERNEL);
+ 	if (!rgd->rd_bh) {
+ 		kfree(rgd->rd_bits);
+-		rgd->rd_bits = NULL;
+ 		return -ENOMEM;
+ 	}
+ 	memset(rgd->rd_bh, 0, length * sizeof(struct buffer_head *));
+@@ -1442,13 +1441,8 @@
+ 		goal = 0;
+ 	}
+ 
+-	if (unlikely(x > length)) {
+-		printk("GFS error: possible RG corruption\n");
+-		printk("    please run gfs_fsck after withdraw\n");
+-		dump_stack();
+-		if (gfs_assert_withdraw(rgd->rd_sbd, x <= length))
+-			blk = 0;
+-	}
++	if (gfs_assert_withdraw(rgd->rd_sbd, x <= length))
++		blk = 0;
+ 
+ 	/* Attach bitmap buffer to trans, modify bits to do block alloc */
+ 	gfs_trans_add_bh(rgd->rd_gl, rgd->rd_bh[buf]);
+diff -ur gfs/util.c gfs/util.c
+--- gfs-2.03.07/gfs/util.c	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/util.c	2008-09-29 11:29:39.000000000 +0200
+@@ -13,10 +13,10 @@
+ 
+ uint32_t gfs_random_number;
+ 
+-struct kmem_cache *gfs_glock_cachep = NULL;
+-struct kmem_cache *gfs_inode_cachep = NULL;
+-struct kmem_cache *gfs_bufdata_cachep = NULL;
+-struct kmem_cache *gfs_mhc_cachep = NULL;
++kmem_cache_t *gfs_glock_cachep = NULL;
++kmem_cache_t *gfs_inode_cachep = NULL;
++kmem_cache_t *gfs_bufdata_cachep = NULL;
++kmem_cache_t *gfs_mhc_cachep = NULL;
+ 
+ /**
+  * gfs_random - Generate a random 32-bit number
+diff -ur gfs/util.h gfs/util.h
+--- gfs-2.03.07/gfs/util.h	2008-08-12 16:14:36.000000000 +0200
++++ gfs-2.03.07/gfs/util.h	2008-09-29 11:29:39.000000000 +0200
+@@ -298,10 +298,10 @@
+ 	yield(); \
+ }
+ 
+-extern struct kmem_cache *gfs_glock_cachep;
+-extern struct kmem_cache *gfs_inode_cachep;
+-extern struct kmem_cache *gfs_bufdata_cachep;
+-extern struct kmem_cache *gfs_mhc_cachep;
++extern kmem_cache_t *gfs_glock_cachep;
++extern kmem_cache_t *gfs_inode_cachep;
++extern kmem_cache_t *gfs_bufdata_cachep;
++extern kmem_cache_t *gfs_mhc_cachep;
+ 
+ void *gmalloc(unsigned int size);
+ 
+--- 2.03.07/gfs/sys.c	2008-09-29 13:31:13.000000000 +0200
++++ 2.03.07/gfs/sys.c	2008-09-29 13:32:42.000000000 +0200
+@@ -72,20 +85,25 @@
+ 	.sysfs_ops     = &gfs_attr_ops,
+ };
+ 
+-static struct kset *gfs_kset;
++static struct kset gfs_kset = {
++	.kobj   = {.name = "gfs",},
++	.ktype  = &gfs_ktype,
++};
+ 
+ int gfs_sys_fs_add(struct gfs_sbd *sdp)
+ {
+ 	int error;
+ 
+-	sdp->sd_kobj.kset = gfs_kset;
++	sdp->sd_kobj.kset = &gfs_kset;
++	sdp->sd_kobj.ktype = &gfs_ktype;
+ 
+-	error = kobject_init_and_add(&sdp->sd_kobj, &gfs_ktype, NULL,
+-				     "%s", sdp->sd_table_name);
++	error = kobject_set_name(&sdp->sd_kobj, "%s", sdp->sd_table_name);
+ 	if (error)
+ 		goto fail;
+ 
+-	kobject_uevent(&sdp->sd_kobj, KOBJ_ADD);
++	error = kobject_register(&sdp->sd_kobj);
++	if (error)
++		goto fail;
+ 
+ 	return 0;
+ 
+@@ -95,21 +113,19 @@
+ 
+ void gfs_sys_fs_del(struct gfs_sbd *sdp)
+ {
+-	kobject_put(&sdp->sd_kobj);
++	kobject_unregister(&sdp->sd_kobj);
+ }
+ 
+ int gfs_sys_init(void)
+ {
+ 	gfs_sys_margs = NULL;
+ 	spin_lock_init(&gfs_sys_margs_lock);
+-	gfs_kset = kset_create_and_add("gfs", NULL, fs_kobj);
+-	if (!gfs_kset)
+-		return -ENOMEM;
+-	return 0;
++	kobj_set_kset_s(&gfs_kset, fs_subsys);
++	return kset_register(&gfs_kset);
+ }
+ 
+ void gfs_sys_uninit(void)
+ {
+ 	kfree(gfs_sys_margs);
+-	kset_unregister(gfs_kset);
++	kset_unregister(&gfs_kset);
+ }
+--- 2.03.07/gfs/lm_interface.h	2008-09-29 08:28:17.000000000 +0200
++++ 2.03.07/gfs/lm_interface.h	1970-01-01 02:00:00.000000000 +0200
+@@ -0,0 +1,272 @@
++/*
++ * Copyright (C) Sistina Software, Inc.  1997-2003 All rights reserved.
++ * Copyright (C) 2004-2006 Red Hat, Inc.  All rights reserved.
++ *
++ * This copyrighted material is made available to anyone wishing to use,
++ * modify, copy, or redistribute it subject to the terms and conditions
++ * of the GNU General Public License version 2.
++ */
++
++#ifndef __LM_INTERFACE_DOT_H__
++#define __LM_INTERFACE_DOT_H__
++
++
++typedef void (*lm_callback_t) (void *ptr, unsigned int type, void *data);
++
++/*
++ * lm_mount() flags
++ *
++ * LM_MFLAG_SPECTATOR
++ * GFS is asking to join the filesystem's lockspace, but it doesn't want to
++ * modify the filesystem.  The lock module shouldn't assign a journal to the FS
++ * mount.  It shouldn't send recovery callbacks to the FS mount.  If the node
++ * dies or withdraws, all locks can be wiped immediately.
++ */
++
++#define LM_MFLAG_SPECTATOR	0x00000001
++
++/*
++ * lm_lockstruct flags
++ *
++ * LM_LSFLAG_LOCAL
++ * The lock_nolock module returns LM_LSFLAG_LOCAL to GFS, indicating that GFS
++ * can make single-node optimizations.
++ */
++
++#define LM_LSFLAG_LOCAL		0x00000001
++
++/*
++ * lm_lockname types
++ */
++
++#define LM_TYPE_RESERVED	0x00
++#define LM_TYPE_NONDISK		0x01
++#define LM_TYPE_INODE		0x02
++#define LM_TYPE_RGRP		0x03
++#define LM_TYPE_META		0x04
++#define LM_TYPE_IOPEN		0x05
++#define LM_TYPE_FLOCK		0x06
++#define LM_TYPE_PLOCK		0x07
++#define LM_TYPE_QUOTA		0x08
++#define LM_TYPE_JOURNAL		0x09
++
++/*
++ * lm_lock() states
++ *
++ * SHARED is compatible with SHARED, not with DEFERRED or EX.
++ * DEFERRED is compatible with DEFERRED, not with SHARED or EX.
++ */
++
++#define LM_ST_UNLOCKED		0
++#define LM_ST_EXCLUSIVE		1
++#define LM_ST_DEFERRED		2
++#define LM_ST_SHARED		3
++
++/*
++ * lm_lock() flags
++ *
++ * LM_FLAG_TRY
++ * Don't wait to acquire the lock if it can't be granted immediately.
++ *
++ * LM_FLAG_TRY_1CB
++ * Send one blocking callback if TRY is set and the lock is not granted.
++ *
++ * LM_FLAG_NOEXP
++ * GFS sets this flag on lock requests it makes while doing journal recovery.
++ * These special requests should not be blocked due to the recovery like
++ * ordinary locks would be.
++ *
++ * LM_FLAG_ANY
++ * A SHARED request may also be granted in DEFERRED, or a DEFERRED request may
++ * also be granted in SHARED.  The preferred state is whichever is compatible
++ * with other granted locks, or the specified state if no other locks exist.
++ *
++ * LM_FLAG_PRIORITY
++ * Override fairness considerations.  Suppose a lock is held in a shared state
++ * and there is a pending request for the deferred state.  A shared lock
++ * request with the priority flag would be allowed to bypass the deferred
++ * request and directly join the other shared lock.  A shared lock request
++ * without the priority flag might be forced to wait until the deferred
++ * requested had acquired and released the lock.
++ */
++
++#define LM_FLAG_TRY		0x00000001
++#define LM_FLAG_TRY_1CB		0x00000002
++#define LM_FLAG_NOEXP		0x00000004
++#define LM_FLAG_ANY		0x00000008
++#define LM_FLAG_PRIORITY	0x00000010
++
++/*
++ * lm_lock() and lm_async_cb return flags
++ *
++ * LM_OUT_ST_MASK
++ * Masks the lower two bits of lock state in the returned value.
++ *
++ * LM_OUT_CACHEABLE
++ * The lock hasn't been released so GFS can continue to cache data for it.
++ *
++ * LM_OUT_CANCELED
++ * The lock request was canceled.
++ *
++ * LM_OUT_ASYNC
++ * The result of the request will be returned in an LM_CB_ASYNC callback.
++ */
++
++#define LM_OUT_ST_MASK		0x00000003
++#define LM_OUT_CACHEABLE	0x00000004
++#define LM_OUT_CANCELED		0x00000008
++#define LM_OUT_ASYNC		0x00000080
++#define LM_OUT_ERROR		0x00000100
++
++/*
++ * lm_callback_t types
++ *
++ * LM_CB_NEED_E LM_CB_NEED_D LM_CB_NEED_S
++ * Blocking callback, a remote node is requesting the given lock in
++ * EXCLUSIVE, DEFERRED, or SHARED.
++ *
++ * LM_CB_NEED_RECOVERY
++ * The given journal needs to be recovered.
++ *
++ * LM_CB_DROPLOCKS
++ * Reduce the number of cached locks.
++ *
++ * LM_CB_ASYNC
++ * The given lock has been granted.
++ */
++
++#define LM_CB_NEED_E		257
++#define LM_CB_NEED_D		258
++#define LM_CB_NEED_S		259
++#define LM_CB_NEED_RECOVERY	260
++#define LM_CB_DROPLOCKS		261
++#define LM_CB_ASYNC		262
++
++/*
++ * lm_recovery_done() messages
++ */
++
++#define LM_RD_GAVEUP		308
++#define LM_RD_SUCCESS		309
++
++
++struct lm_lockname {
++	u64 ln_number;
++	unsigned int ln_type;
++};
++
++#define lm_name_equal(name1, name2) \
++	(((name1)->ln_number == (name2)->ln_number) && \
++	 ((name1)->ln_type == (name2)->ln_type)) \
++
++struct lm_async_cb {
++	struct lm_lockname lc_name;
++	int lc_ret;
++};
++
++struct lm_lockstruct;
++
++struct lm_lockops {
++	const char *lm_proto_name;
++
++	/*
++	 * Mount/Unmount
++	 */
++
++	int (*lm_mount) (char *table_name, char *host_data,
++			 lm_callback_t cb, void *cb_data,
++			 unsigned int min_lvb_size, int flags,
++			 struct lm_lockstruct *lockstruct,
++			 struct kobject *fskobj);
++
++	void (*lm_others_may_mount) (void *lockspace);
++
++	void (*lm_unmount) (void *lockspace);
++
++	void (*lm_withdraw) (void *lockspace);
++
++	/*
++	 * Lock oriented operations
++	 */
++
++	int (*lm_get_lock) (void *lockspace, struct lm_lockname *name, void **lockp);
++
++	void (*lm_put_lock) (void *lock);
++
++	unsigned int (*lm_lock) (void *lock, unsigned int cur_state,
++				 unsigned int req_state, unsigned int flags);
++
++	unsigned int (*lm_unlock) (void *lock, unsigned int cur_state);
++
++	void (*lm_cancel) (void *lock);
++
++	int (*lm_hold_lvb) (void *lock, char **lvbp);
++	void (*lm_unhold_lvb) (void *lock, char *lvb);
++
++	/*
++	 * Posix Lock oriented operations
++	 */
++
++	int (*lm_plock_get) (void *lockspace, struct lm_lockname *name,
++			     struct file *file, struct file_lock *fl);
++
++	int (*lm_plock) (void *lockspace, struct lm_lockname *name,
++			 struct file *file, int cmd, struct file_lock *fl);
++
++	int (*lm_punlock) (void *lockspace, struct lm_lockname *name,
++			   struct file *file, struct file_lock *fl);
++
++	/*
++	 * Client oriented operations
++	 */
++
++	void (*lm_recovery_done) (void *lockspace, unsigned int jid,
++				  unsigned int message);
++
++	struct module *lm_owner;
++};
++
++/*
++ * lm_mount() return values
++ *
++ * ls_jid - the journal ID this node should use
++ * ls_first - this node is the first to mount the file system
++ * ls_lvb_size - size in bytes of lock value blocks
++ * ls_lockspace - lock module's context for this file system
++ * ls_ops - lock module's functions
++ * ls_flags - lock module features
++ */
++
++struct lm_lockstruct {
++	unsigned int ls_jid;
++	unsigned int ls_first;
++	unsigned int ls_lvb_size;
++	void *ls_lockspace;
++	const struct lm_lockops *ls_ops;
++	int ls_flags;
++};
++
++/*
++ * Lock module bottom interface.  A lock module makes itself available to GFS
++ * with these functions.
++ */
++
++int gfs2_register_lockproto(const struct lm_lockops *proto);
++void gfs2_unregister_lockproto(const struct lm_lockops *proto);
++
++/*
++ * Lock module top interface.  GFS calls these functions when mounting or
++ * unmounting a file system.
++ */
++
++int gfs2_mount_lockproto(char *proto_name, char *table_name, char *host_data,
++			 lm_callback_t cb, void *cb_data,
++			 unsigned int min_lvb_size, int flags,
++			 struct lm_lockstruct *lockstruct,
++			 struct kobject *fskobj);
++
++void gfs2_unmount_lockproto(struct lm_lockstruct *lockstruct);
++
++void gfs2_withdraw_lockproto(struct lm_lockstruct *lockstruct);
++
++#endif /* __LM_INTERFACE_DOT_H__ */
