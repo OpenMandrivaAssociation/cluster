@@ -1,93 +1,89 @@
-%define name	cluster
-%define module_name gnbd
-%define major   3
-%define version 3.0.17
-%define release %mkrel 5
-%define cmanlibname %mklibname cman %major 
-%define cmanlibnamedevel %mklibname -d cman
-%define dlmlibname %mklibname dlm %major 
-%define dlmlibnamedevel %mklibname -d dlm
-%define ccslibname %mklibname ccs %major
-%define ccslibnamedevel %mklibname -d ccs
-%define fencelibname %mklibname fence %major
-%define fencelibnamedevel %mklibname -d fence
-%define fencelibnamestatic %mklibname -d -s fence
-%define logthreadlibname %mklibname logthread %major
-%define logthreadlibnamedevel %mklibname -d logthread
-%define logthreadlibnamestatic %mklibname -d -s logthread
 %define _requires_exceptions perl\(VMware::VmPerl
 %global build_gnbd 0
 
-Name:		%name
-Version:	%{version}
-Release:	%{release}
+%define module_name gnbd
+%define major	3
+%define libcman	%mklibname cman %{major} 
+%define devcman	%mklibname -d cman
+%define libdlm	%mklibname dlm %{major} 
+%define devdlm	%mklibname -d dlm
+%define libccs	%mklibname ccs %{major}
+%define devccs	%mklibname -d ccs
+%define libfence %mklibname fence %{major}
+%define devfence %mklibname -d fence
+%define liblogthread %mklibname logthread %{major}
+%define devlogthread %mklibname -d logthread
+
 Summary:	Redhat suite for clustered filesystems
+Name:		cluster
+Version:	3.0.17
+Release:	5
 License:	GPL
-Source:		https://fedorahosted.org/releases/c/l/cluster/cluster-%{version}.tar.gz
+Group:		System/Kernel and hardware
+Url:		http://sources.redhat.com/cluster/wiki
+Source0:	https://fedorahosted.org/releases/c/l/cluster/cluster-%{version}.tar.gz
 Source1:	gfs-2.6.18-2.6.23.patch
 
 # Remove apc_snmp, as its compilation is broken
-Patch: cluster-2.03.07-fix-cman-init.patch
-Patch1: cluster-2.03.07-kernel-2.6.25.patch
-Patch2: cluster-2.03.11-gfs-should-start-clvmd.patch
+Patch0:		cluster-2.03.07-fix-cman-init.patch
+Patch2:		cluster-2.03.11-gfs-should-start-clvmd.patch
 
-Url:		http://sources.redhat.com/cluster/wiki
-Group:		System/Kernel and hardware
-Buildroot:	%{_tmppath}/%{name}-%{version}-root
-Buildrequires:	libxml2-devel
-BuildRequires:	openais-devel >= 1.1.0
-BuildRequires:	slang-devel
-BuildRequires:	ncurses-devel
-BuildRequires:	libvirt-devel
-# For fence_xvm
-BuildRequires:	nss-devel
-# For ldap configuration support
 BuildRequires:	openldap-devel
 # For perl binding
 BuildRequires:	perl-devel
-#Requires:	%{libname}
-Requires:	gfs-utils cman rgmanager
+BuildRequires:	pkgconfig(libSaAmf)
+BuildRequires:	pkgconfig(libvirt)
+Buildrequires:	pkgconfig(libxml-2.0)
+BuildRequires:	pkgconfig(ncurses)
+# For fence_xvm
+BuildRequires:	pkgconfig(nss)
+# For ldap configuration support
+BuildRequires:	pkgconfig(slang)
+
+Requires:	cman
+Requires:	gfs-utils
+Requires:	rgmanager
 
 %description
 Redhat suite for clustered filesystems
 
-%package -n     %{cmanlibname}
+%package -n     %{libcman}
 Summary:        Shared Librairies for Cluster Manager
 Group:          Development/Other
 
-%description  -n %{cmanlibname}
+%description  -n %{libcman}
 Shared Librairies for Cluster Manager
 
-%package -n %{cmanlibnamedevel}
-Summary:        Cluster Manager header files and static libraries
+%package -n %{devcman}
+Summary:        Cluster Manager header files and development libraries
 Group:          Development/Other
-Requires:       %{cmanlibname} = %{version}
+Requires:       %{libcman} = %{version}
 Provides:	cman-devel = %{version}
 
-%description -n %{cmanlibnamedevel}
-This package contains header files and static libraries.
+%description -n %{devcman}
+This package contains header files and development libraries.
 
-%package -n     %{dlmlibname}
+%package -n     %{libdlm}
 Summary:        Shared Librairies for the Distributed Lock Manager
 Group:          Development/Other
 
-%description  -n %{dlmlibname}
+%description  -n %{libdlm}
 Shared Librairies for cluster
 
-%package -n     %{ccslibname}
+%package -n     %{libccs}
 Summary:        Shared Librairies for Cluster Configuration Service
 Group:          Development/Other
 
-%description  -n %{ccslibname}
+%description  -n %{libccs}
 Shared Librairies for Cluster Configuration Service
 
-%package -n %{ccslibnamedevel}
+%package -n %{devccs}
 Summary:        Development libraries for Cluster Configuration Service
 Group:          Development/Other
-Requires:       %{ccslibname} = %{version}
+Requires:       %{libccs} = %{version}
 Provides:	ccs-devel = %{version}
 
-%description -n %{ccslibnamedevel}
+%description -n %{devccs}
 Development libraries for Cluster Configuration Service
 
 %package -n perl-Cluster-CCS
@@ -97,79 +93,59 @@ Group:          Development/Perl
 %description -n perl-Cluster-CCS
 Perl bindings for Cluster Configuration Service
 
-%package -n     %{fencelibname}
+%package -n     %{libfence}
 Summary:        Shared Librairies for cluster fencing
 Group:          Development/Other
 
-%description  -n %{fencelibname}
+%description  -n %{libfence}
 Shared Librairies for cluster fencing
 
-%package -n %{fencelibnamedevel}
+%package -n %{devfence}
 Summary:        Development libraries for cluster fencing
 Group:          Development/Other
-Requires:       %{fencelibname} = %{version}
+Requires:       %{libfence} = %{version}
 Provides:	fence-devel = %{version}
 
-%description -n %{fencelibnamedevel}
+%description -n %{devfence}
 Development libraries for cluster fencing
 
-%package -n %{fencelibnamestatic}
-Summary:        Static Development libraries for cluster fencing
-Group:          Development/Other
-Requires:       %{fencelibnamedevel} = %{version}
-
-%description -n %{fencelibnamestatic}
-Static Development libraries for cluster fencing
-
-%package -n     %{logthreadlibname}
+%package -n     %{liblogthread}
 Summary:        Shared Librairies for cluster fencing
 Group:          Development/Other
 
-%description  -n %{logthreadlibname}
+%description  -n %{liblogthread}
 Shared Librairies for cluster fencing
 
-%package -n %{logthreadlibnamedevel}
+%package -n %{devlogthread}
 Summary:        Development libraries for cluster fencing
 Group:          Development/Other
-Requires:       %{logthreadlibname} = %{version}
+Requires:       %{liblogthread} = %{version}
 Provides:	logthread-devel = %{version}
 
-%description -n %{logthreadlibnamedevel}
+%description -n %{devlogthread}
 Development libraries for cluster fencing
 
-%package -n %{logthreadlibnamestatic}
-Summary:        Static Development libraries for cluster fencing
-Group:          Development/Other
-Requires:       %{logthreadlibnamedevel} = %{version}
-
-%description -n %{logthreadlibnamestatic}
-Static Development libraries for cluster fencing
-
 %package devel
-Summary:        Cluster Manager header files and static libraries
+Summary:        Cluster Manager header files and development libraries
 Group:          Development/Other
-Requires:	dlm-devel = %{version} cman-devel = %{version} 
-Requires:	logthread-devel = %{version} fence-devel = %{version}
-Requires:	ccs-devel = %{version}
 
 %description devel
-Cluster Manager header files and static libraries
+Cluster Manager header files and development libraries
 
-%package -n %{dlmlibnamedevel}
-Summary:        Distributed Lock Manager header files and static libraries
+%package -n %{devdlm}
+Summary:        Distributed Lock Manager header files and development libraries
 Group:          Development/Other
-Requires:       %{dlmlibname} = %{version}
+Requires:       %{libdlm} = %{version}
 Provides:	dlm-devel = %{version}
 
-%description -n %{dlmlibnamedevel}
-This package contains header files and static libraries.
+%description -n %{devdlm}
+This package contains header files and development libraries.
 
 %if %build_gnbd
 %package -n dkms-%{module_name}
 Summary:	Redhat's cluster suite kernel modules
 Group:          System/Kernel and hardware
-Requires(pre):  dkms
-Requires(post): dkms
+Requires(pre,post):	dkms
 
 %description -n dkms-%{module_name}
 The dynamic kernel modules
@@ -178,8 +154,7 @@ The dynamic kernel modules
 %package -n dkms-gfs
 Summary:	Global File System Kernel Driver
 Group:          System/Kernel and hardware
-Requires(pre):  dkms
-Requires(post): dkms
+Requires(pre,post):	dkms
 
 %description -n dkms-gfs
 The dynamic kernel module package for Global File System
@@ -190,9 +165,10 @@ This package is only required for kernels older than 2.6.24
 %package -n cman
 Group:		System/Kernel and hardware
 Summary:	Cluster Manager
-Requires:	openais >= 1.1.0 libxml2-utils fence-agents
-Requires(pre):		rpm-helper
-Requires(post):		rpm-helper
+Requires:	openais >= 1.1.0
+Requires:	libxml2-utils
+Requires:	fence-agents
+Requires(pre,post):	rpm-helper
 # Try and ensure we upgrade packages that depend on cman
 Conflicts:	gfs-utils < %{version}, gfs2-utils < %{version},
 Conflicts:	rgmanager < %{version}, gnbd < %{version}
@@ -203,9 +179,9 @@ Cluster Manager
 %package -n rgmanager
 Group:		System/Kernel and hardware
 Summary:	Resource Group Manager
-Requires(pre):		rpm-helper
-Requires(post):		rpm-helper
-Requires:		fence-agents resource-agents
+Requires(pre,post):	rpm-helper
+Requires:	fence-agents
+Requires:	resource-agents
 
 %description -n rgmanager
 Resource Group Manager
@@ -215,8 +191,7 @@ Resource Group Manager
 Group:		System/Kernel and hardware
 Summary:	Global Filesystem Utilities
 Requires:	gfs2-utils
-Requires(pre):		rpm-helper
-Requires(post):		rpm-helper
+Requires(pre,post):	rpm-helper
 
 %description -n gfs-utils
 Global Filesystem Utilities
@@ -226,8 +201,7 @@ Global Filesystem Utilities
 Group:		System/Kernel and hardware
 Summary:	Global Filesystem Utilities
 Requires:	kmod(gfs2)
-Requires(pre):		rpm-helper
-Requires(post):		rpm-helper
+Requires(pre,post):	rpm-helper
 
 %description -n gfs2-utils
 Global Filesystem Utilities
@@ -243,29 +217,24 @@ Global Network Block Device utilities
 %endif
 
 %prep
-%setup -q -n %{name}-%{version}
+%setup -q
 #patch -p1 -b .orig
 %patch2 -p1 -b .shouldstartclvmd
-%if %mdkversion <= 200810
-%patch1 -p1 -b .kernel2625
-%endif
 cp Makefile Makefile.make
 
 %build
-
 ./configure \
 	--libdir=%{_libdir} \
 	--mandir=%{_mandir} \
 	--prefix=%{_prefix} \
 	--sbindir=%{_sbindir} \
 	--incdir=%{_includedir} \
-	--without_kernel_modules \
-	--disable_kernel_check \
 	--nssincdir=%{_includedir}/nss \
 	--nsprincdir=%{_includedir}/nspr4 \
 	--without_fence_agents \
-	--without_resource_agents
-#--kernel_src=/usr/src/linux \
+	--without_resource_agents \
+	--without_kernel_modules \
+	--disable_kernel_check
 
 #Fixing some weird harcoded path
 perl -pi -e 's|-DPLUGINDIR=\\\"\$\{plugindir\}\\\"|-DPLUGINDIR=\\"%{_libdir}/magma\\"|g' magma/lib/Makefile
@@ -274,7 +243,6 @@ perl -pi -e 's|-DPLUGINDIR=\\\"\$\{plugindir\}\\\"|-DPLUGINDIR=\\"%{_libdir}/mag
 make
 
 %install
-rm -rf %{buildroot}
 mkdir -p %{buildroot}/%{_mandir}
 mkdir -p %{buildroot}/%{_datadir}/%{name}-%{version}
 mkdir -p %{buildroot}/%{_libdir}
@@ -339,9 +307,8 @@ perl -pi -e 's/BUILDDIR =.*/BUILDDIR =\$\{RPM_BUILD_ROOT\}/' Makefile
 mkdir -p %{buildroot}/%{_initrddir}
 mv %{buildroot}/%{_sysconfdir}/init.d/* %{buildroot}/%{_initrddir}
 mv %{buildroot}/usr/libexec/* %{buildroot}/%{_libdir}
-
-%clean
-rm -rf $RPM_BUILD_ROOT
+rm -f %{buildroot}%{_libdir}/*.a
+chmod +x %{buildroot}%{_libdir}/lcrso/*.lcrso
 
 %if %build_gnbd
 %post -n dkms-%{module_name}
@@ -392,99 +359,64 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %preun -n gfs2-utils
 %_preun_service gfs2
 
-%if %mdkversion < 200900
-%post -n %{dlmlibname} -p /sbin/ldconfig
-%post -n %{cmanlibname} -p /sbin/ldconfig
-%post -n %{ccslibname} -p /sbin/ldconfig
-%postun -n %{dlmlibname} -p /sbin/ldconfig
-%postun -n %{cmanlibname} -p /sbin/ldconfig
-%postun -n %{ccslibname} -p /sbin/ldconfig
-%endif
-
 %if %build_gnbd
 %files -n dkms-%{module_name}
-%defattr(-,root,root)
 %_usrsrc/%{module_name}-%{version}-%{release}
 %endif
 
 %files -n dkms-gfs
-%defattr(-,root,root)
 %_usrsrc/gfs-%{version}-%{release}
 
-%files -n %{cmanlibnamedevel}
-%defattr(-,root,root)
-%{_libdir}/*cman*.a
+%files -n %{devcman}
 %{_libdir}/*cman.so
 %{_includedir}/libcman.h
 %{_libdir}/pkgconfig/libcman.pc
 
-%files -n %{dlmlibnamedevel}
-%defattr(-,root,root)
-%{_libdir}/*dlm*.a
+%files -n %{devdlm}
 %{_libdir}/*dlm*.so
 %{_mandir}/man3/*dlm*.3.*
 %{_includedir}/libdlm*.h
 %{_libdir}/pkgconfig/libdlm*.pc
 
-%files -n %{cmanlibname}
-%defattr(-,root,root)
+%files -n %{libcman}
 %{_libdir}/*cman.so.%{major}*
 
-%files -n %{dlmlibname}
-%defattr(-,root,root)
+%files -n %{libdlm}
 %{_libdir}/*dlm*.so.%{major}*
 
-%files -n %{ccslibname}
-%defattr(-,root,root)
+%files -n %{libccs}
 %{_libdir}/*ccs*.so.*
 
-%files -n %{ccslibnamedevel}
-%defattr(-,root,root)
+%files -n %{devccs}
 %{_libdir}/*ccs*.so
 %{_includedir}/ccs.h
-%{_libdir}/libccs.a
 %{_libdir}/pkgconfig/libccs.pc
 
 %files -n perl-Cluster-CCS
-%defattr(-,root,root)
 %{perl_vendorarch}/auto/Cluster/CCS
 %{perl_vendorarch}/Cluster/CCS.pm
 %{_mandir}/man3/Cluster::CCS.3pm.*
 
-%files -n %{fencelibname}
-%defattr(-,root,root)
+%files -n %{libfence}
 %{_libdir}/*fence*.so.*
 
-%files -n %{fencelibnamedevel}
-%defattr(-,root,root)
+%files -n %{devfence}
 %{_includedir}/*fence*.h
 %{_libdir}/*fence*.so
 %{_libdir}/pkgconfig/libfence*.pc
 
-%files -n %{fencelibnamestatic}
-%defattr(-,root,root)
-%{_libdir}/*fence*.a
-
-%files -n %{logthreadlibname}
-%defattr(-,root,root)
+%files -n %{liblogthread}
 %{_libdir}/*logthread*.so.*
 
-%files -n %{logthreadlibnamedevel}
-%defattr(-,root,root)
+%files -n %{devlogthread}
 %{_includedir}/*logthread*.h
 %{_libdir}/*logthread*.so
 %{_libdir}/pkgconfig/liblogthread*.pc
 
-%files -n %{logthreadlibnamestatic}
-%defattr(-,root,root)
-%{_libdir}/*logthread*.a
-
 %files devel
-%defattr(-,root,root)
-%{_datadir}/doc/%name
+%{_datadir}/doc/%{name}
 
 %files -n rgmanager
-%defattr(-,root,root)
 %{_initrddir}/rgmanager
 %{_sbindir}/clu*
 %{_sbindir}/rgmanager
@@ -494,7 +426,6 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %{_mandir}/man8/rgmanager.8.*
 
 %files -n cman
-%defattr(-,root,root)
 %{_initrddir}/cman
 #{_initrddir}/qdiskd
 #{_initrddir}/scsi_reserve
@@ -509,8 +440,6 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %dir /etc/cluster
 %config(noreplace) %{_sysconfdir}/logrotate.d/cluster
 %dir /var/log/cluster
-#attr(0755,root,root) %{_datadir}/fence
-#{_datadir}/snmp/mibs/*.mib
 %{_libdir}/lcrso/service_cman.lcrso
 %{_libdir}/lcrso/config_*.lcrso
 %config /etc/udev/rules.d/51-dlm.rules
@@ -530,7 +459,6 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 
 %if 0
 %files -n gfs-utils
-%defattr(-,root,root)
 /sbin/*.gfs
 %{_sbindir}/gfs_*
 %exclude %{_sbindir}/gfs_controld
@@ -540,7 +468,6 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 %endif
 
 %files -n gfs2-utils
-%defattr(-,root,root)
 /sbin/*.gfs2
 %{_sbindir}/gfs2_*
 %{_initrddir}/gfs2
@@ -548,131 +475,7 @@ dkms remove -m gfs -v %{version}-%{release} --rpm_safe_upgrade --all ||:
 
 %if %build_gnbd
 %files -n gnbd
-%defattr(-,root,root)
 #{_sbindir}/gnbd_*
 #{_mandir}/man8/gnbd*.8.*
 %endif
-
-
-%changelog
-* Tue May 03 2011 Oden Eriksson <oeriksson@mandriva.com> 3.0.17-2mdv2011.0
-+ Revision: 663384
-- mass rebuild
-
-* Wed Oct 13 2010 Buchan Milne <bgmilne@mandriva.org> 3.0.17-1mdv2011.0
-+ Revision: 585374
-- update to new version 3.0.17
-
-* Tue Sep 07 2010 Buchan Milne <bgmilne@mandriva.org> 3.0.16-1mdv2011.0
-+ Revision: 576571
-- update to new version 3.0.16
-- Add rgmanager man page to files list
-
-* Sun Aug 01 2010 Funda Wang <fwang@mandriva.org> 3.0.11-3mdv2011.0
-+ Revision: 564231
-- rebuild for perl 5.12.1
-
-  + Jérôme Quelin <jquelin@mandriva.org>
-    - rebuild
-
-* Tue May 04 2010 Buchan Milne <bgmilne@mandriva.org> 3.0.11-1mdv2010.1
-+ Revision: 541951
-- Fix URL
-- New version 3.0.11
-- Drop gfs1 bits
-
-* Mon Jan 04 2010 Buchan Milne <bgmilne@mandriva.org> 3.0.6-1mdv2010.1
-+ Revision: 486142
-- update to new version 3.0.6
-
-* Wed Dec 02 2009 Buchan Milne <bgmilne@mandriva.org> 3.0.5-1mdv2010.1
-+ Revision: 472548
-- New version 3.0.5
-
-* Fri Nov 20 2009 Buchan Milne <bgmilne@mandriva.org> 3.0.4-1mdv2010.1
-+ Revision: 467603
-- update to new version 3.0.4
-
-* Mon Oct 05 2009 Buchan Milne <bgmilne@mandriva.org> 3.0.3-1mdv2010.0
-+ Revision: 453853
-- Buildrequire perl-devel for perl binding
-- Buildrequire openldap-devel
-- New version 3.0.3
-- buildrequire openais-devel 1.1.0
-- add more requires to cluster-devel
-- rgmanager should require resource-agents and fence-agents
-- New version 3.0.2
-- disable gnbd for now
-- split more libs out
-- split agents out (as done upstream)
-
-* Sun Aug 09 2009 Oden Eriksson <oeriksson@mandriva.com> 2.03.11-3mdv2010.0
-+ Revision: 413256
-- rebuild
-
-* Tue Apr 07 2009 Buchan Milne <bgmilne@mandriva.org> 2.03.11-2mdv2009.1
-+ Revision: 364890
-- Fix one more path in cman init script
-- Make gfs init scripts should-start clvmd
-
-* Wed Apr 01 2009 Buchan Milne <bgmilne@mandriva.org> 2.03.11-1mdv2009.1
-+ Revision: 363145
-- New version 2.03.11
-
-* Mon Sep 29 2008 Buchan Milne <bgmilne@mandriva.org> 2.03.07-2mdv2009.0
-+ Revision: 289564
-- Fix build on 2008.1
-- Add dkms-gfs package with suitable patches to build gfs driver on Xen
-
-* Wed Sep 24 2008 Buchan Milne <bgmilne@mandriva.org> 2.03.07-1mdv2009.0
-+ Revision: 287787
-- Fix some paths in the cman init script
-- Add a cluster-devel package for the ccs.h files and requiring dlm-devel and cman-devel
-- New version 2.03.07
-- Rework package
-
-  + Thierry Vignaud <tv@mandriva.org>
-    - rebuild
-    - kill re-definition of %%buildroot on Pixel's request
-
-  + Pixel <pixel@mandriva.com>
-    - do not call ldconfig in %%post/%%postun, it is now handled by filetriggers
-    - normalize call to ldconfig in %%post/%%postun
-
-  + Olivier Blin <oblin@mandriva.com>
-    - restore BuildRoot
-
-* Fri Jun 22 2007 Thierry Vignaud <tv@mandriva.org> 1.03.00-2mdv2008.0
-+ Revision: 42954
-- fix more groups
-
-
-* Wed Dec 13 2006 Götz Waschk <waschk@mandriva.org> 1.03.00-2mdv2007.0
-+ Revision: 96346
-- remove useless sources and binaries from the dkms package
-- fix deps of dkms package
-
-  + Andreas Hasenack <andreas@mandriva.com>
-    - updated to version 1.03.00
-    - added lccs patch so it won't take the libccs.so library
-      from the installed system
-    - added requires for libxml2-devel to the dkms package because
-      it's needed at runtime to build the module (!)
-
-  + ehabkost <ehabkost>
-    - Import cluster
-
-* Thu Aug 17 2006 Eduardo Habkost <ehabkost@mandriva.com> 1.02.99-cvs20060816-1mdk
-- Updating to CVS STABLE version as of 2006-08-16
-- Removing apc_snmp, as its compilation is broken
-
-* Thu Oct 27 2005 Erwan Velu <erwan@seanodes.com> 1.01.00-3mdk
-- Ooups, fixing wrong requires
-
-* Thu Oct 27 2005 Erwan Velu <erwan@seanodes.com> 1.01.00-2mdk
-- Fixing libs
-- A clean libification is not really possible, ccsd is using the libmagma.so :(
-
-* Fri Oct 21 2005 Erwan Velu <erwan@seanodes.com> 1.01.00-1mdk
-- Initial Release
 
