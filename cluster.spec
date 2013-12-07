@@ -29,7 +29,7 @@
 Summary:	Redhat suite for clustered filesystems
 Name:		cluster
 Version:	3.0.17
-Release:	9
+Release:	10
 License:	GPL
 Group:		System/Kernel and hardware
 Url:		http://sources.redhat.com/cluster/wiki
