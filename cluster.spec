@@ -32,7 +32,7 @@ Version:	3.0.17
 Release:	16
 License:	GPL
 Group:		System/Kernel and hardware
-Url:		http://sources.redhat.com/cluster/wiki
+Url:		https://sources.redhat.com/cluster/wiki
 Source0:	https://fedorahosted.org/releases/c/l/cluster/cluster-%{version}.tar.gz
 Source1:	gfs-2.6.18-2.6.23.patch
 
