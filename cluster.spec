@@ -40,6 +40,11 @@ Source1:	gfs-2.6.18-2.6.23.patch
 Patch0:		cluster-2.03.07-fix-cman-init.patch
 Patch2:		cluster-2.03.11-gfs-should-start-clvmd.patch
 
+BuildRequires:	autoconf
+BuildRequires:	automake
+BuildRequires:	libtool-base
+BuildRequires:	slibtool
+BuildRequires:	make
 BuildRequires:	openldap-devel
 # For perl binding
 BuildRequires:	perl-devel
